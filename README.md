@@ -17,11 +17,13 @@ Supabase keys live in `.env` (already filled in, gitignored). See `.env.example`
 2. Paste the entire contents of [`supabase/schema.sql`](./supabase/schema.sql) and run it.
    - This creates `players`, `course_holes`, `scores`, `claims`, sets RLS policies for public
      anon read/write (no auth), turns on Realtime for `players`/`scores`/`claims`, creates the
-     `player-photos` storage bucket, and seeds 14 placeholder players + a generic par-72 layout.
+     `player-photos` storage bucket, and seeds 14 placeholder players + Zebula Golf Estate's real
+     scorecard (Elephant championship tees), applied to both rounds.
 3. Rename the 14 seeded players either by editing the `insert into players (...)` block before
-   running the SQL, or afterwards from the **Players** tab in the app (tap ✏️ on any card).
-4. If you have Zebula's real scorecard (par + stroke index per hole), update the `course_holes`
-   table to match — the seed data is a generic layout used for handicap/Stableford maths.
+   running the SQL, or afterwards from the **Players** tab in the app (tap the pencil on any card).
+4. If a project already had the old generic par-72 placeholder loaded, run
+   [`supabase/update_course_zebula.sql`](./supabase/update_course_zebula.sql) once to overwrite it
+   with the real Zebula numbers.
 
 ## Features
 

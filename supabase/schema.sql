@@ -142,19 +142,21 @@ insert into players (name, handicap, tagline) values
 on conflict (name) do nothing;
 
 -- ============================================================
--- Seed: course layout (generic par-72, used for both rounds).
--- Edit the par / stroke_index values here if you have Zebula's
--- real scorecard handy — stroke_index is the hole's difficulty
--- rank (1 = hardest, 18 = easiest) used for handicap allocation.
+-- Seed: Zebula Golf Estate scorecard (Elephant championship
+-- tees), used for both rounds since it's the same course both
+-- days. stroke_index is the hole's difficulty rank (1 = hardest,
+-- 18 = easiest) used for handicap allocation.
 -- ============================================================
 
 insert into course_holes (round, hole, par, stroke_index)
 select r.round, h.hole, h.par, h.stroke_index
 from (values (1), (2)) as r(round)
 cross join (values
-  (1, 4, 7), (2, 4, 13), (3, 3, 17), (4, 5, 3), (5, 4, 11),
-  (6, 4, 1), (7, 3, 15), (8, 4, 9), (9, 5, 5), (10, 4, 8),
-  (11, 4, 14), (12, 3, 18), (13, 5, 4), (14, 4, 12), (15, 4, 2),
-  (16, 3, 16), (17, 4, 10), (18, 5, 6)
+  (1, 4, 5), (2, 5, 13), (3, 4, 15), (4, 3, 11), (5, 4, 1),
+  (6, 5, 9), (7, 4, 3), (8, 3, 17), (9, 4, 7), (10, 4, 12),
+  (11, 4, 6), (12, 4, 14), (13, 3, 18), (14, 4, 2), (15, 5, 16),
+  (16, 4, 4), (17, 3, 10), (18, 5, 8)
 ) as h(hole, par, stroke_index)
-on conflict (round, hole) do nothing;
+on conflict (round, hole) do update
+  set par = excluded.par,
+      stroke_index = excluded.stroke_index;
