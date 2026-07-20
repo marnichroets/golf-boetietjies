@@ -3,6 +3,7 @@ import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { holePoints, strokesReceived } from '../utils/stableford'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
+import { ChevronLeftIcon, ChevronRightIcon } from '../components/icons'
 
 const POINT_LABELS = { 0: 'Blow up', 1: 'Bogey', 2: 'Par', 3: 'Birdie', 4: 'Eagle', 5: 'Albatross' }
 
@@ -50,16 +51,11 @@ export default function Scorecard() {
   return (
     <div>
       <h1 className="page-title">Scorecard</h1>
-      <p className="page-subtitle">Fast hole-by-hole entry. Tap a mate's name to score for them.</p>
+      <p className="page-subtitle">Fast entry, big numbers, no excuses.</p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div className="segmented" style={{ marginBottom: 14 }}>
         {[1, 2].map((r) => (
-          <button
-            key={r}
-            className="btn"
-            style={{ flex: 1, background: round === r ? 'var(--accent)' : 'var(--surface-hi)', color: round === r ? '#05130c' : 'var(--text)' }}
-            onClick={() => setRound(r)}
-          >
+          <button key={r} className={round === r ? 'active' : ''} onClick={() => setRound(r)}>
             Round {r}
           </button>
         ))}
@@ -70,17 +66,15 @@ export default function Scorecard() {
           <button
             key={p.id}
             onClick={() => setActivePlayerId(p.id)}
-            className="pill"
+            className={`pill ${p.id === activePlayer.id ? 'pill-brass' : ''}`}
             style={{
               flexShrink: 0,
-              border: p.id === activePlayer.id ? `1px solid ${playerColor(p)}` : '1px solid var(--border)',
-              background: p.id === activePlayer.id ? 'var(--surface-hi)' : 'var(--surface-alt)',
-              color: p.id === activePlayer.id ? 'var(--text)' : 'var(--text-dim)',
               cursor: 'pointer',
               padding: '8px 12px',
+              fontSize: 12.5,
             }}
           >
-            {playerEmoji(p)} {p.name.split(' ')[0]}
+            {p.name}
           </button>
         ))}
       </div>
@@ -89,19 +83,26 @@ export default function Scorecard() {
         {holes.map((h) => {
           const s = playerScores[h.hole]
           const filled = s != null
+          const isCurrent = h.hole === hole
           return (
             <button
               key={h.hole}
               onClick={() => setHole(h.hole)}
               style={{
                 aspectRatio: '1',
-                borderRadius: 8,
-                border: h.hole === hole ? '2px solid var(--accent)' : '1px solid var(--border)',
-                background: filled ? 'var(--surface-hi)' : 'var(--surface-alt)',
-                color: filled ? 'var(--text)' : 'var(--text-faint)',
-                fontSize: 12,
+                borderRadius: 9,
+                border: isCurrent ? '1.5px solid var(--brass)' : '1px solid var(--border)',
+                background: isCurrent
+                  ? 'rgba(201,162,39,0.16)'
+                  : filled
+                    ? 'var(--surface-hi)'
+                    : 'var(--surface-alt)',
+                color: isCurrent ? 'var(--brass-light)' : filled ? 'var(--text)' : 'var(--text-faint)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 12.5,
                 fontWeight: 700,
                 cursor: 'pointer',
+                transition: 'transform 0.12s var(--ease)',
               }}
             >
               {h.hole}
@@ -114,8 +115,8 @@ export default function Scorecard() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', fontWeight: 700 }}>HOLE {hole}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-faint)' }}>
+              <div className="eyebrow">Hole {hole}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 2 }}>
                 Par {holeInfo.par} · SI {holeInfo.stroke_index}
                 {received > 0 ? ` · +${received} shot${received > 1 ? 's' : ''}` : ''}
               </div>
@@ -123,21 +124,25 @@ export default function Scorecard() {
             <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, margin: '22px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, margin: '24px 0' }}>
             <button
               className="btn"
-              style={{ width: 56, height: 56, borderRadius: '50%', fontSize: 26 }}
+              style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0 }}
               onClick={() => setStrokes((strokes ?? holeInfo.par) - 1)}
             >
               −
             </button>
-            <div style={{ textAlign: 'center', minWidth: 90 }}>
-              <div style={{ fontSize: 56, fontWeight: 800, lineHeight: 1 }}>{strokes ?? '–'}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>strokes</div>
+            <div style={{ textAlign: 'center', minWidth: 96 }}>
+              <div className="num-display" style={{ fontSize: 60, lineHeight: 1 }}>
+                {strokes ?? '–'}
+              </div>
+              <div className="eyebrow" style={{ marginTop: 4 }}>
+                strokes
+              </div>
             </div>
             <button
               className="btn btn-accent"
-              style={{ width: 56, height: 56, borderRadius: '50%', fontSize: 26 }}
+              style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0 }}
               onClick={() => setStrokes((strokes ?? holeInfo.par) + 1)}
             >
               +
@@ -154,28 +159,28 @@ export default function Scorecard() {
             </div>
           ) : (
             <div style={{ textAlign: 'center' }}>
-              <span className="pill" style={{ fontSize: 13 }}>
+              <span className="pill pill-brass" style={{ fontSize: 13, padding: '6px 14px' }}>
                 {points} pt{points === 1 ? '' : 's'} · {POINT_LABELS[Math.min(points, 5)] ?? 'Nice'}
               </span>
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
             <button
               className="btn"
-              style={{ flex: 1 }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               disabled={hole <= 1}
               onClick={() => setHole((h) => Math.max(1, h - 1))}
             >
-              ← Prev
+              <ChevronLeftIcon width={16} height={16} /> Prev
             </button>
             <button
               className="btn"
-              style={{ flex: 1 }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               disabled={hole >= 18}
               onClick={() => setHole((h) => Math.min(18, h + 1))}
             >
-              Next →
+              Next <ChevronRightIcon width={16} height={16} />
             </button>
           </div>
         </div>

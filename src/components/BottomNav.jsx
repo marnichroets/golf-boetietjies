@@ -1,20 +1,21 @@
 import { NavLink } from 'react-router-dom'
+import { ChartIcon, FlagIcon, TargetIcon, TrophyIcon, UsersIcon } from './icons'
 
 const TABS = [
-  { to: '/leaderboard', icon: '🏆', label: 'Leaders' },
-  { to: '/scorecard', icon: '⛳', label: 'Scorecard' },
-  { to: '/claims', icon: '🎯', label: 'Claims' },
-  { to: '/stats', icon: '📊', label: 'Stats' },
-  { to: '/players', icon: '👥', label: 'Players' },
+  { to: '/leaderboard', Icon: TrophyIcon, label: 'Leaders' },
+  { to: '/scorecard', Icon: FlagIcon, label: 'Scorecard' },
+  { to: '/claims', Icon: TargetIcon, label: 'Claims' },
+  { to: '/stats', Icon: ChartIcon, label: 'Stats' },
+  { to: '/players', Icon: UsersIcon, label: 'Players' },
 ]
 
 export default function BottomNav() {
   return (
     <nav className="bottom-nav">
-      {TABS.map((tab) => (
-        <NavLink key={tab.to} to={tab.to} className={({ isActive }) => (isActive ? 'active' : '')}>
-          <span className="nav-icon">{tab.icon}</span>
-          <span>{tab.label}</span>
+      {TABS.map(({ to, Icon, label }) => (
+        <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'active' : '')}>
+          <Icon />
+          <span>{label}</span>
         </NavLink>
       ))}
     </nav>

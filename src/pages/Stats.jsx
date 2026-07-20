@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { computeStats } from '../utils/stats'
-import { playerEmoji } from '../utils/playerVisuals'
+import { FlameIcon, SnowflakeIcon, TargetIcon } from '../components/icons'
 
 export default function Stats() {
   const { players, scores, courseHoles } = useGolfData()
@@ -11,9 +11,9 @@ export default function Stats() {
     return (
       <div>
         <h1 className="page-title">Fun Stats</h1>
-        <p className="page-subtitle">Once scores start rolling in, the banter starts here.</p>
+        <p className="page-subtitle">The banter starts once scores hit the board.</p>
         <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
-          No scores logged yet ⛳
+          Quiet in the clubhouse. Go post a score.
         </div>
       </div>
     )
@@ -21,15 +21,15 @@ export default function Stats() {
 
   const banter = []
   if (stats.mostPars) {
-    banter.push(`🎯 ${stats.mostPars.player.name} is the most reliable in the group with ${stats.mostPars.count} par${stats.mostPars.count === 1 ? '' : 's'}.`)
+    banter.push(`${stats.mostPars.player.name} is the most reliable in the group with ${stats.mostPars.count} par${stats.mostPars.count === 1 ? '' : 's'}.`)
   }
   if (stats.blowUp) {
     banter.push(
-      `💀 Biggest blow-up: ${stats.blowUp.player.name} carded a ${stats.blowUp.strokes} on hole ${stats.blowUp.hole} (par ${stats.blowUp.par}, Round ${stats.blowUp.round}). Rough day at the office.`,
+      `Biggest blow-up: ${stats.blowUp.player.name} carded a ${stats.blowUp.strokes} on hole ${stats.blowUp.hole} (par ${stats.blowUp.par}, Round ${stats.blowUp.round}). Rough day at the office.`,
     )
   }
   if (stats.mostConsistent) {
-    banter.push(`🧊 Iceman award: ${stats.mostConsistent.player.name} — barely a wobble in the scoring, hole after hole.`)
+    banter.push(`Iceman award: ${stats.mostConsistent.player.name} — barely a wobble in the scoring, hole after hole.`)
   }
 
   return (
@@ -39,37 +39,33 @@ export default function Stats() {
 
       <div style={{ display: 'grid', gap: 10, marginBottom: 20 }}>
         {stats.mostPars && (
-          <StatCard
-            icon={playerEmoji(stats.mostPars.player)}
-            title="Most Pars"
-            name={stats.mostPars.player.name}
-            value={`${stats.mostPars.count} par${stats.mostPars.count === 1 ? '' : 's'}`}
-          />
+          <StatCard Icon={TargetIcon} title="Most Pars" name={stats.mostPars.player.name} value={`${stats.mostPars.count} par${stats.mostPars.count === 1 ? '' : 's'}`} />
         )}
         {stats.blowUp && (
           <StatCard
-            icon="💥"
+            Icon={FlameIcon}
             title="Biggest Blow-Up Hole"
             name={`${stats.blowUp.player.name} · Hole ${stats.blowUp.hole} (R${stats.blowUp.round})`}
             value={`${stats.blowUp.strokes} strokes (par ${stats.blowUp.par})`}
           />
         )}
         {stats.mostConsistent && (
-          <StatCard
-            icon="🧊"
-            title="Most Consistent"
-            name={stats.mostConsistent.player.name}
-            value={`${stats.mostConsistent.holesPlayed} holes played`}
-          />
+          <StatCard Icon={SnowflakeIcon} title="Most Consistent" name={stats.mostConsistent.player.name} value={`${stats.mostConsistent.holesPlayed} holes played`} />
         )}
       </div>
 
+      <hr className="gold-rule" />
+
       <div className="card">
-        <div style={{ fontWeight: 800, marginBottom: 10 }}>🗣️ Banter</div>
-        <div style={{ display: 'grid', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17 }}>Clubhouse Banter</span>
+          <span className="eyebrow">Unfiltered</span>
+        </div>
+        <div style={{ display: 'grid', gap: 12 }}>
           {banter.map((line, i) => (
-            <div key={i} style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-              {line}
+            <div key={i} style={{ display: 'flex', gap: 10 }}>
+              <span style={{ color: 'var(--brass)', fontFamily: 'var(--font-display)', fontWeight: 800 }}>“</span>
+              <div style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.55 }}>{line}</div>
             </div>
           ))}
         </div>
@@ -78,15 +74,30 @@ export default function Stats() {
   )
 }
 
-function StatCard({ icon, title, name, value }) {
+function StatCard({ Icon, title, name, value }) {
   return (
-    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <div style={{ fontSize: 26 }}>{icon}</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 700 }}>{title.toUpperCase()}</div>
-        <div style={{ fontWeight: 700 }}>{name}</div>
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'rgba(201,162,39,0.12)',
+          border: '1px solid var(--border)',
+          color: 'var(--brass)',
+          flexShrink: 0,
+        }}
+      >
+        <Icon width={18} height={18} />
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)', textAlign: 'right' }}>{value}</div>
+      <div style={{ flex: 1 }}>
+        <div className="eyebrow">{title}</div>
+        <div style={{ fontWeight: 700, marginTop: 2 }}>{name}</div>
+      </div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brass-light)', textAlign: 'right' }}>{value}</div>
     </div>
   )
 }

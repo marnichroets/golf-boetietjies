@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
-import { playerEmoji } from '../utils/playerVisuals'
+import { playerColor, playerEmoji } from '../utils/playerVisuals'
+import { Crest } from './icons'
 
 export default function TopBar() {
   const { connected, players } = useGolfData()
@@ -11,7 +12,10 @@ export default function TopBar() {
 
   return (
     <div className="top-bar">
-      <div className="brand">🏌️ Golf Boetietjies</div>
+      <div className="brand">
+        <Crest size={22} style={{ color: 'var(--brass)' }} />
+        <span className="brand-word">Golf Boetietjies</span>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div className="conn-pill">
           <span className={`sync-dot ${connected ? '' : 'pending'}`} />
@@ -20,13 +24,24 @@ export default function TopBar() {
         {me && (
           <button
             className="pill"
-            style={{ border: 'none', cursor: 'pointer' }}
+            style={{ border: '1px solid var(--border)', cursor: 'pointer' }}
             onClick={() => {
               setPlayerId(null)
               navigate('/')
             }}
           >
-            {playerEmoji(me)} {me.name}
+            <span
+              className="avatar"
+              style={{
+                width: 18,
+                height: 18,
+                fontSize: 11,
+                background: me.photo_url ? 'transparent' : playerColor(me),
+              }}
+            >
+              {me.photo_url ? <img src={me.photo_url} alt="" /> : playerEmoji(me)}
+            </span>
+            {me.name}
           </button>
         )}
       </div>

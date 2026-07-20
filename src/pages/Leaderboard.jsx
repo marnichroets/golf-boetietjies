@@ -32,80 +32,66 @@ export default function Leaderboard() {
   return (
     <div>
       <h1 className="page-title">Leaderboard</h1>
-      <p className="page-subtitle">Stableford points. Higher is better.</p>
+      <p className="page-subtitle">Stableford points. Bragging rights are permanent.</p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div className="segmented" style={{ marginBottom: 16 }}>
         {VIEWS.map((v) => (
-          <button
-            key={v.key}
-            className="btn"
-            style={{
-              flex: 1,
-              fontSize: 13,
-              padding: '10px 8px',
-              background: view === v.key ? 'var(--accent)' : 'var(--surface-hi)',
-              color: view === v.key ? '#05130c' : 'var(--text)',
-            }}
-            onClick={() => setView(v.key)}
-          >
+          <button key={v.key} className={view === v.key ? 'active' : ''} onClick={() => setView(v.key)}>
             {v.label}
           </button>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gap: 8 }}>
-        {rows.map((row, idx) => (
-          <div
-            key={row.player.id}
-            className="card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '12px 14px',
-              border: idx === 0 && row.points > 0 ? '1px solid var(--accent)' : '1px solid var(--border)',
-            }}
-          >
-            <div style={{ width: 22, textAlign: 'center', fontWeight: 800, color: idx === 0 ? 'var(--accent)' : 'var(--text-dim)' }}>
-              {idx + 1}
-            </div>
+      <div style={{ display: 'grid', gap: 9 }}>
+        {rows.map((row, idx) => {
+          const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : ''
+          const isLeader = idx === 0 && row.points > 0
+          return (
             <div
+              key={row.player.id}
+              className="card"
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                background: row.player.photo_url ? 'transparent' : playerColor(row.player),
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 17,
-                flexShrink: 0,
-                overflow: 'hidden',
+                gap: 12,
+                padding: '12px 14px',
+                border: isLeader ? '1px solid var(--border-strong)' : '1px solid var(--border)',
+                boxShadow: isLeader ? '0 14px 30px -16px rgba(201,162,39,0.45), var(--shadow-card)' : 'var(--shadow-card)',
               }}
             >
-              {row.player.photo_url ? (
-                <img src={row.player.photo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                playerEmoji(row.player)
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {row.player.name}
+              <div className={`rank-badge ${rankClass}`} style={rankClass ? undefined : { background: 'var(--surface-hi)' }}>
+                {idx + 1}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                {row.holesPlayed === 0
-                  ? 'Not started'
-                  : row.holesPlayed >= row.thruMax
-                    ? 'F'
-                    : `Thru ${view === 'combined' ? row.holesPlayed : row.holesPlayed}`}
-                {' '}
-                · HCP {row.player.handicap}
+              <span
+                className="avatar"
+                style={{
+                  width: 40,
+                  height: 40,
+                  fontSize: 18,
+                  background: row.player.photo_url ? 'transparent' : playerColor(row.player),
+                  boxShadow: isLeader
+                    ? '0 0 0 2px var(--brass), 0 3px 8px -3px rgba(0,0,0,0.5)'
+                    : 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 3px 8px -3px rgba(0,0,0,0.5)',
+                }}
+              >
+                {row.player.photo_url ? <img src={row.player.photo_url} alt="" /> : playerEmoji(row.player)}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {row.player.name}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                  {row.holesPlayed === 0 ? 'Not started' : row.holesPlayed >= row.thruMax ? 'Finished' : `Thru ${row.holesPlayed}`}
+                  {' · HCP '}
+                  {row.player.handicap}
+                </div>
+              </div>
+              <div className="num-display" style={{ fontSize: 27, color: isLeader ? 'var(--brass-light)' : 'var(--text)' }}>
+                {row.points}
               </div>
             </div>
-            <div style={{ fontSize: 26, fontWeight: 800 }}>{row.points}</div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

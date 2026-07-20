@@ -9,6 +9,7 @@ import Scorecard from './pages/Scorecard'
 import Leaderboard from './pages/Leaderboard'
 import Claims from './pages/Claims'
 import Stats from './pages/Stats'
+import { Crest } from './components/icons'
 
 export default function App() {
   const { loading } = useGolfData()
@@ -17,8 +18,8 @@ export default function App() {
   if (loading) {
     return (
       <div className="center-screen">
-        <div style={{ fontSize: 40 }}>⛳</div>
-        <p style={{ color: 'var(--text-dim)' }}>Loading the boys' trip…</p>
+        <Crest size={38} style={{ color: 'var(--brass)', margin: '0 auto 14px' }} />
+        <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Loading the boys' trip…</p>
       </div>
     )
   }

@@ -45,7 +45,11 @@ export function GolfDataProvider({ children }) {
 
     async function load() {
       const [playersRes, holesRes, scoresRes, claimsRes] = await Promise.all([
-        supabase.from('players').select('*').order('created_at', { ascending: true }),
+        supabase
+          .from('players')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true }),
         supabase.from('course_holes').select('*'),
         supabase.from('scores').select('*'),
         supabase.from('claims').select('*'),
