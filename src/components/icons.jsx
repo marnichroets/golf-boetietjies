@@ -108,6 +108,25 @@ export function MapIcon(props) {
   )
 }
 
+export function SwapIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M4 8h13" />
+      <path d="M14 4.5 17.5 8 14 11.5" />
+      <path d="M20 16H7" />
+      <path d="M10 12.5 6.5 16 10 19.5" />
+    </svg>
+  )
+}
+
+export function CheckIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M5 12.5 9.5 17 19 6.5" />
+    </svg>
+  )
+}
+
 export function FlameIcon(props) {
   return (
     <svg viewBox="0 0 24 24" {...base} {...props}>

@@ -331,16 +331,25 @@ textarea {
 .brand {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.brand svg {
+  flex-shrink: 0;
 }
 
 .brand-word {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 15.5px;
-  letter-spacing: 0.05em;
+  font-size: 14px;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .conn-pill {

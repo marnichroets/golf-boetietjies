@@ -28,8 +28,10 @@ Supabase keys live in `.env` (already filled in, gitignored). See `.env.example`
 ## Features
 
 - **Players** — 14 profiles: photo (upload, emoji fallback), handicap, trash-talk tagline.
-- **Scorecard** — hole-by-hole entry for Round 1 & 2, Stableford points computed live, optimistic
-  writes so it never blocks on patchy course wifi/data.
+- **Scorecard** — score just yourself or your whole fourball (up to 4 players) from one phone in
+  a holes × players grid, with Front 9 / Back 9 tabs and a Front/Back/Total summary (Stableford
+  points, gross, +/-par) per player. Stableford points computed live, optimistic writes so it
+  never blocks on patchy course wifi/data.
 - **Course** — the Zebula scorecard itself: par, stroke index, and distance per hole, grouped
   front/back nine with OUT/IN/TOTAL sums.
 - **Leaderboard** — Round 1 / Round 2 / Combined, ranked live by Stableford points.
