@@ -21,15 +21,17 @@ Supabase keys live in `.env` (already filled in, gitignored). See `.env.example`
      scorecard (Elephant championship tees), applied to both rounds.
 3. Rename the 14 seeded players either by editing the `insert into players (...)` block before
    running the SQL, or afterwards from the **Players** tab in the app (tap the pencil on any card).
-4. If a project already had the old generic par-72 placeholder loaded, run
-   [`supabase/update_course_zebula.sql`](./supabase/update_course_zebula.sql) once to overwrite it
-   with the real Zebula numbers.
+4. If a project already had the old placeholder or the pre-distances course loaded, run
+   [`supabase/update_course_zebula.sql`](./supabase/update_course_zebula.sql) once — it adds the
+   `metres` column if missing and overwrites `course_holes` with the real Zebula numbers.
 
 ## Features
 
 - **Players** — 14 profiles: photo (upload, emoji fallback), handicap, trash-talk tagline.
 - **Scorecard** — hole-by-hole entry for Round 1 & 2, Stableford points computed live, optimistic
   writes so it never blocks on patchy course wifi/data.
+- **Course** — the Zebula scorecard itself: par, stroke index, and distance per hole, grouped
+  front/back nine with OUT/IN/TOTAL sums.
 - **Leaderboard** — Round 1 / Round 2 / Combined, ranked live by Stableford points.
 - **Claims** — tap to claim Longest Drive / Nearest the Pin per round, live holder display.
 - **Stats** — most pars, biggest blow-up hole, most consistent player, auto-generated banter.

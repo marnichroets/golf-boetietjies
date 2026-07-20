@@ -98,6 +98,16 @@ export function ChevronRightIcon(props) {
   )
 }
 
+export function MapIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2Z" />
+      <path d="M9 4v14" />
+      <path d="M15 6v14" />
+    </svg>
+  )
+}
+
 export function FlameIcon(props) {
   return (
     <svg viewBox="0 0 24 24" {...base} {...props}>

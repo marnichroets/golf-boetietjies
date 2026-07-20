@@ -6,6 +6,7 @@ import TopBar from './components/TopBar'
 import PickPlayer from './pages/PickPlayer'
 import Players from './pages/Players'
 import Scorecard from './pages/Scorecard'
+import Course from './pages/Course'
 import Leaderboard from './pages/Leaderboard'
 import Claims from './pages/Claims'
 import Stats from './pages/Stats'
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/leaderboard" replace />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/scorecard" element={<Scorecard />} />
+          <Route path="/course" element={<Course />} />
           <Route path="/claims" element={<Claims />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/players" element={<Players />} />

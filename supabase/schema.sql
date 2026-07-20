@@ -16,15 +16,18 @@ create table if not exists players (
   created_at timestamptz not null default now()
 );
 
--- ---------- course holes (par + stroke index, per round) ----------
+-- ---------- course holes (par + stroke index + distance, per round) ----------
 create table if not exists course_holes (
   id uuid primary key default gen_random_uuid(),
   round smallint not null check (round in (1, 2)),
   hole smallint not null check (hole between 1 and 18),
   par smallint not null check (par between 3 and 5),
   stroke_index smallint not null check (stroke_index between 1 and 18),
+  metres smallint check (metres between 50 and 700),
   unique (round, hole)
 );
+
+alter table course_holes add column if not exists metres smallint check (metres between 50 and 700);
 
 -- ---------- scores (one row per player/round/hole) ----------
 create table if not exists scores (
@@ -145,18 +148,20 @@ on conflict (name) do nothing;
 -- Seed: Zebula Golf Estate scorecard (Elephant championship
 -- tees), used for both rounds since it's the same course both
 -- days. stroke_index is the hole's difficulty rank (1 = hardest,
--- 18 = easiest) used for handicap allocation.
+-- 18 = easiest) used for handicap allocation. metres is the
+-- hole's playing distance from the tee.
 -- ============================================================
 
-insert into course_holes (round, hole, par, stroke_index)
-select r.round, h.hole, h.par, h.stroke_index
+insert into course_holes (round, hole, par, stroke_index, metres)
+select r.round, h.hole, h.par, h.stroke_index, h.metres
 from (values (1), (2)) as r(round)
 cross join (values
-  (1, 4, 5), (2, 5, 13), (3, 4, 15), (4, 3, 11), (5, 4, 1),
-  (6, 5, 9), (7, 4, 3), (8, 3, 17), (9, 4, 7), (10, 4, 12),
-  (11, 4, 6), (12, 4, 14), (13, 3, 18), (14, 4, 2), (15, 5, 16),
-  (16, 4, 4), (17, 3, 10), (18, 5, 8)
-) as h(hole, par, stroke_index)
+  (1, 4, 5, 369), (2, 5, 13, 473), (3, 4, 15, 302), (4, 3, 11, 197), (5, 4, 1, 429),
+  (6, 5, 9, 545), (7, 4, 3, 390), (8, 3, 17, 125), (9, 4, 7, 338), (10, 4, 12, 364),
+  (11, 4, 6, 379), (12, 4, 14, 298), (13, 3, 18, 155), (14, 4, 2, 355), (15, 5, 16, 457),
+  (16, 4, 4, 385), (17, 3, 10, 200), (18, 5, 8, 482)
+) as h(hole, par, stroke_index, metres)
 on conflict (round, hole) do update
   set par = excluded.par,
-      stroke_index = excluded.stroke_index;
+      stroke_index = excluded.stroke_index,
+      metres = excluded.metres;
