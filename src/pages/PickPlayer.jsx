@@ -8,18 +8,14 @@ export default function PickPlayer() {
   const { setPlayerId } = useLocalPlayer()
 
   return (
-    <div className="app-main" style={{ paddingBottom: 40 }}>
-      <div style={{ textAlign: 'center', margin: '34px 0 22px' }}>
-        <Crest size={46} style={{ color: 'var(--brass)', margin: '0 auto 14px' }} />
-        <h1 className="page-title" style={{ fontSize: 28 }}>
-          Golf Boetietjies
-        </h1>
-        <p className="page-subtitle" style={{ marginBottom: 0 }}>
-          Pick your name. No hiding your handicap now.
-        </p>
+    <div className="app-main" style={{ paddingBottom: 40, paddingTop: 22 }}>
+      <div className="front-door-banner fairway">
+        <div className="front-door-crest-ring">
+          <Crest size={38} style={{ color: 'var(--brass-light)' }} />
+        </div>
+        <h1 className="page-title">Golf Boetietjies</h1>
+        <p className="page-subtitle">Pick your name. No hiding your handicap now.</p>
       </div>
-
-      <hr className="gold-rule" />
 
       {players.length === 0 && (
         <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
@@ -27,38 +23,22 @@ export default function PickPlayer() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gap: 10 }}>
+      <div className="pick-grid">
         {players.map((p) => (
-          <button
-            key={p.id}
-            className="card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 13,
-              textAlign: 'left',
-              cursor: 'pointer',
-              padding: '13px 16px',
-            }}
-            onClick={() => setPlayerId(p.id)}
-          >
+          <button key={p.id} className="card pick-card" onClick={() => setPlayerId(p.id)}>
             <span
               className="avatar"
               style={{
-                width: 46,
-                height: 46,
-                fontSize: 20,
+                width: 56,
+                height: 56,
+                fontSize: 24,
                 background: p.photo_url ? 'transparent' : playerColor(p),
               }}
             >
               {p.photo_url ? <img src={p.photo_url} alt={p.name} /> : playerEmoji(p)}
             </span>
-            <div>
-              <div style={{ fontWeight: 700 }}>{p.name}</div>
-              <div className="eyebrow" style={{ marginTop: 2 }}>
-                HCP {p.handicap}
-              </div>
-            </div>
+            <div className="pick-card-name">{p.name}</div>
+            <div className="eyebrow">HCP {p.handicap}</div>
           </button>
         ))}
       </div>

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
+import { useFourball, MAX_GROUP } from '../hooks/useFourball'
 import { holePoints, strokesReceived, roundSummary, formatRelativePar } from '../utils/stableford'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
-import { CheckIcon } from '../components/icons'
+import { CheckIcon, UsersIcon } from '../components/icons'
 
 const POINT_LABELS = { 0: 'Blow up', 1: 'Bogey', 2: 'Par', 3: 'Birdie', 4: 'Eagle', 5: 'Albatross' }
-const MAX_GROUP = 4
+const NUMPAD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 function shortLabel(name) {
   const parts = name.trim().split(/\s+/)
@@ -24,15 +25,24 @@ function cellColor(diff) {
 export default function Scorecard() {
   const { players, courseHoles, scores, upsertScore, isPending } = useGolfData()
   const { playerId: myId } = useLocalPlayer()
+  const { groupIds, setGroupIds, toggleMember } = useFourball()
   const [round, setRound] = useState(1)
   const [nine, setNine] = useState('front')
-  const [groupIds, setGroupIds] = useState(() => (myId ? [myId] : []))
   const [activeCell, setActiveCell] = useState(null)
+  const [editingGroup, setEditingGroup] = useState(groupIds.length === 0)
+
+  // Pre-select "you" as a convenience starting point the very first time the
+  // picker shows up empty — the group is still fully editable from there.
+  // Uses an idempotent update (not toggleMember) since StrictMode double-
+  // invokes mount effects in dev, which would otherwise add-then-remove.
+  useEffect(() => {
+    if (myId) setGroupIds((prev) => (prev.length === 0 ? [myId] : prev))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
-    if (myId && groupIds.length === 0) setGroupIds([myId])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myId])
+    if (groupIds.length === 0) setEditingGroup(true)
+  }, [groupIds.length])
 
   const allHoles = courseHoles[round] || []
   const frontHoles = useMemo(() => allHoles.filter((h) => h.hole <= 9), [allHoles])
@@ -53,14 +63,6 @@ export default function Scorecard() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round, nine, groupIds.join(',')])
-
-  const toggleGroupMember = (id) => {
-    setGroupIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id)
-      if (prev.length >= MAX_GROUP) return prev
-      return [...prev, id]
-    })
-  }
 
   const activeHoleInfo = activeCell && activeHoles.find((h) => h.hole === activeCell.hole)
   const activePlayer = activeCell && players.find((p) => p.id === activeCell.playerId)
@@ -97,6 +99,19 @@ export default function Scorecard() {
 
   const pendingKey = activeCell ? `score:${activeCell.playerId}:${round}:${activeCell.hole}` : null
 
+  if (editingGroup) {
+    return (
+      <FourballPicker
+        players={players}
+        groupIds={groupIds}
+        toggleMember={toggleMember}
+        myId={myId}
+        hasExistingGroup={groupPlayers.length > 0}
+        onDone={() => setEditingGroup(false)}
+      />
+    )
+  }
+
   return (
     <div>
       <h1 className="page-title">Scorecard</h1>
@@ -110,289 +125,351 @@ export default function Scorecard() {
         ))}
       </div>
 
-      <div className="eyebrow" style={{ margin: '2px 0 8px' }}>
-        Scoring for (up to {MAX_GROUP})
+      <GroupBar groupPlayers={groupPlayers} myId={myId} onChange={() => setEditingGroup(true)} />
+
+      <div className="segmented" style={{ marginBottom: 14 }}>
+        <button className={nine === 'front' ? 'active' : ''} onClick={() => setNine('front')}>
+          Front 9
+        </button>
+        <button className={nine === 'back' ? 'active' : ''} onClick={() => setNine('back')}>
+          Back 9
+        </button>
       </div>
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 6, marginBottom: 14 }}>
+
+      <div className="card-flush" style={{ marginBottom: 16 }}>
+        <GridHeaderRow groupPlayers={groupPlayers} myId={myId} />
+        {activeHoles.map((h) => (
+          <div
+            key={h.hole}
+            className="sc-grid-row"
+            style={{ gridTemplateColumns: `50px repeat(${groupPlayers.length}, 1fr)` }}
+          >
+            <div className="sc-hole-label">
+              <div className="sc-hole-num">{h.hole}</div>
+              <div className="sc-hole-meta">
+                P{h.par} · SI{h.stroke_index}
+              </div>
+              <div className="sc-hole-dist">{h.metres != null ? `${h.metres}m` : ''}</div>
+            </div>
+            {groupPlayers.map((p) => {
+              const strokes = scores[p.id]?.[round]?.[h.hole] ?? null
+              const isActive = activeCell && activeCell.playerId === p.id && activeCell.hole === h.hole
+              return (
+                <button
+                  key={p.id}
+                  className="sc-cell"
+                  onClick={() => setActiveCell({ playerId: p.id, hole: h.hole })}
+                  style={{
+                    border: isActive ? '1.5px solid var(--brass)' : '1px solid var(--border)',
+                    background: isActive ? 'rgba(201,162,39,0.16)' : 'var(--surface-hi)',
+                    color: strokes == null ? 'var(--text-faint)' : cellColor(strokes - h.par),
+                  }}
+                >
+                  {strokes ?? '–'}
+                </button>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+
+      {activeCell && activeHoleInfo && activePlayer && (
+        <EntryPanel
+          activeCell={activeCell}
+          activeHoleInfo={activeHoleInfo}
+          activePlayer={activePlayer}
+          activeStrokes={activeStrokes}
+          activePoints={activePoints}
+          activeReceived={activeReceived}
+          myId={myId}
+          pendingKey={pendingKey}
+          isPending={isPending}
+          setActiveStrokes={setActiveStrokes}
+        />
+      )}
+
+      <ScorecardTotals
+        round={round}
+        groupPlayers={groupPlayers}
+        frontHoles={frontHoles}
+        backHoles={backHoles}
+        scores={scores}
+        myId={myId}
+      />
+    </div>
+  )
+}
+
+function FourballPicker({ players, groupIds, toggleMember, myId, hasExistingGroup, onDone }) {
+  return (
+    <div>
+      <h1 className="page-title">Pick Your Fourball</h1>
+      <p className="page-subtitle">
+        Select up to {MAX_GROUP} players — this sticks around, so you won't have to redo it every hole.
+      </p>
+
+      <div className="pick-grid" style={{ marginBottom: 18 }}>
         {players.map((p) => {
           const selected = groupIds.includes(p.id)
           const disabled = !selected && groupIds.length >= MAX_GROUP
           return (
             <button
               key={p.id}
-              onClick={() => toggleGroupMember(p.id)}
-              className={`pill ${selected ? 'pill-brass' : ''}`}
-              style={{
-                flexShrink: 0,
-                cursor: disabled ? 'default' : 'pointer',
-                opacity: disabled ? 0.4 : 1,
-                padding: '8px 12px',
-                fontSize: 12.5,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
+              className={`card pick-card ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
+              onClick={() => !disabled && toggleMember(p.id)}
             >
-              {selected && <CheckIcon width={11} height={11} strokeWidth={2.4} />}
-              {p.name}
+              {selected && (
+                <span className="pick-card-check">
+                  <CheckIcon width={11} height={11} strokeWidth={2.6} />
+                </span>
+              )}
+              <span
+                className="avatar"
+                style={{
+                  width: 52,
+                  height: 52,
+                  fontSize: 22,
+                  background: p.photo_url ? 'transparent' : playerColor(p),
+                }}
+              >
+                {p.photo_url ? <img src={p.photo_url} alt={p.name} /> : playerEmoji(p)}
+              </span>
+              <div className="pick-card-name">{p.id === myId ? `${p.name} (you)` : p.name}</div>
+              <div className="eyebrow">HCP {p.handicap}</div>
             </button>
           )
         })}
       </div>
 
-      {groupPlayers.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
-          Pick at least one player to start scoring.
+      <div style={{ display: 'flex', gap: 10 }}>
+        {hasExistingGroup && (
+          <button className="btn" style={{ flex: 1 }} onClick={onDone}>
+            Cancel
+          </button>
+        )}
+        <button className="btn btn-accent" style={{ flex: 2 }} disabled={groupIds.length === 0} onClick={onDone}>
+          {hasExistingGroup ? 'Save Group' : 'Start Scoring'} ({groupIds.length}/{MAX_GROUP})
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function GroupBar({ groupPlayers, myId, onChange }) {
+  return (
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 14 }}>
+      <UsersIcon width={16} height={16} style={{ color: 'var(--brass)', flexShrink: 0 }} />
+      <div style={{ display: 'flex', flexShrink: 0 }}>
+        {groupPlayers.map((p, i) => (
+          <span
+            key={p.id}
+            className="avatar"
+            style={{
+              width: 28,
+              height: 28,
+              fontSize: 13,
+              marginLeft: i === 0 ? 0 : -8,
+              border: '2px solid var(--surface)',
+              background: p.photo_url ? 'transparent' : playerColor(p),
+              zIndex: 10 - i,
+            }}
+          >
+            {p.photo_url ? <img src={p.photo_url} alt="" /> : playerEmoji(p)}
+          </span>
+        ))}
+      </div>
+      <span
+        style={{
+          fontSize: 12,
+          color: 'var(--text-dim)',
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {groupPlayers.map((p) => (p.id === myId ? 'You' : shortLabel(p.name))).join(', ')}
+      </span>
+      <button className="pill pill-brass" style={{ cursor: 'pointer', border: 'none', flexShrink: 0 }} onClick={onChange}>
+        Change
+      </button>
+    </div>
+  )
+}
+
+function GridHeaderRow({ groupPlayers, myId }) {
+  return (
+    <div className="sc-grid-header" style={{ gridTemplateColumns: `50px repeat(${groupPlayers.length}, 1fr)` }}>
+      <span className="eyebrow">Hole</span>
+      {groupPlayers.map((p) => (
+        <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 0 }}>
+          <span
+            className="avatar"
+            style={{
+              width: 22,
+              height: 22,
+              fontSize: 11,
+              background: p.photo_url ? 'transparent' : playerColor(p),
+            }}
+          >
+            {p.photo_url ? <img src={p.photo_url} alt="" /> : playerEmoji(p)}
+          </span>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--text-dim)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '100%',
+            }}
+          >
+            {p.id === myId ? 'You' : shortLabel(p.name)}
+          </span>
         </div>
-      ) : (
-        <>
-          <div className="segmented" style={{ marginBottom: 14 }}>
-            <button className={nine === 'front' ? 'active' : ''} onClick={() => setNine('front')}>
-              Front 9
-            </button>
-            <button className={nine === 'back' ? 'active' : ''} onClick={() => setNine('back')}>
-              Back 9
-            </button>
+      ))}
+    </div>
+  )
+}
+
+function EntryPanel({
+  activeCell,
+  activeHoleInfo,
+  activePlayer,
+  activeStrokes,
+  activePoints,
+  activeReceived,
+  myId,
+  pendingKey,
+  isPending,
+  setActiveStrokes,
+}) {
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div className="eyebrow">
+            Hole {activeCell.hole} · {activePlayer.id === myId ? 'You' : activePlayer.name}
           </div>
-
-          <div className="card-flush" style={{ marginBottom: 16 }}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: `44px repeat(${groupPlayers.length}, 1fr)`,
-                borderBottom: '1px solid var(--border)',
-                padding: '10px 10px',
-                gap: 4,
-              }}
-            >
-              <span className="eyebrow">Hole</span>
-              {groupPlayers.map((p) => (
-                <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, minWidth: 0 }}>
-                  <span
-                    className="avatar"
-                    style={{
-                      width: 20,
-                      height: 20,
-                      fontSize: 10,
-                      background: p.photo_url ? 'transparent' : playerColor(p),
-                    }}
-                  >
-                    {p.photo_url ? <img src={p.photo_url} alt="" /> : playerEmoji(p)}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: 'var(--text-dim)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '100%',
-                    }}
-                  >
-                    {p.id === myId ? 'You' : shortLabel(p.name)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {activeHoles.map((h) => (
-              <div
-                key={h.hole}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: `44px repeat(${groupPlayers.length}, 1fr)`,
-                  alignItems: 'center',
-                  padding: '7px 10px',
-                  gap: 4,
-                  borderBottom: '1px solid var(--border-soft)',
-                }}
-              >
-                <div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14.5 }}>{h.hole}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>
-                    P{h.par} · {h.stroke_index}
-                  </div>
-                </div>
-                {groupPlayers.map((p) => {
-                  const strokes = scores[p.id]?.[round]?.[h.hole] ?? null
-                  const isActive = activeCell && activeCell.playerId === p.id && activeCell.hole === h.hole
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => setActiveCell({ playerId: p.id, hole: h.hole })}
-                      style={{
-                        aspectRatio: '1',
-                        maxHeight: 40,
-                        borderRadius: 9,
-                        border: isActive ? '1.5px solid var(--brass)' : '1px solid var(--border)',
-                        background: isActive ? 'rgba(201,162,39,0.16)' : 'var(--surface-hi)',
-                        color: strokes == null ? 'var(--text-faint)' : cellColor(strokes - h.par),
-                        fontFamily: 'var(--font-display)',
-                        fontWeight: 800,
-                        fontSize: 15,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {strokes ?? '–'}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
+          <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 2 }}>
+            Par {activeHoleInfo.par} · SI {activeHoleInfo.stroke_index}
+            {activeReceived > 0 ? ` · +${activeReceived} shot${activeReceived > 1 ? 's' : ''}` : ''}
           </div>
+        </div>
+        <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
+      </div>
 
-          {activeCell && activeHoleInfo && activePlayer && (
-            <div className="card" style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div className="eyebrow">
-                    Hole {activeCell.hole} · {activePlayer.id === myId ? 'You' : activePlayer.name}
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 2 }}>
-                    Par {activeHoleInfo.par} · SI {activeHoleInfo.stroke_index}
-                    {activeReceived > 0 ? ` · +${activeReceived} shot${activeReceived > 1 ? 's' : ''}` : ''}
-                  </div>
-                </div>
-                <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
-              </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, margin: '22px 0 20px' }}>
+        <button
+          className="btn"
+          style={{ width: 50, height: 50, borderRadius: '50%', fontSize: 22, padding: 0, flexShrink: 0 }}
+          onClick={() => setActiveStrokes((activeStrokes ?? activeHoleInfo.par) - 1)}
+        >
+          −
+        </button>
+        <div style={{ textAlign: 'center', minWidth: 96 }}>
+          <div className="num-display" style={{ fontSize: 66, lineHeight: 1 }}>
+            {activeStrokes ?? '–'}
+          </div>
+          <div className="eyebrow" style={{ marginTop: 4 }}>
+            strokes
+          </div>
+        </div>
+        <button
+          className="btn btn-accent"
+          style={{ width: 50, height: 50, borderRadius: '50%', fontSize: 22, padding: 0, flexShrink: 0 }}
+          onClick={() => setActiveStrokes((activeStrokes ?? activeHoleInfo.par) + 1)}
+        >
+          +
+        </button>
+      </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, margin: '24px 0' }}>
-                <button
-                  className="btn"
-                  style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0 }}
-                  onClick={() => setActiveStrokes((activeStrokes ?? activeHoleInfo.par) - 1)}
-                >
-                  −
-                </button>
-                <div style={{ textAlign: 'center', minWidth: 96 }}>
-                  <div className="num-display" style={{ fontSize: 60, lineHeight: 1 }}>
-                    {activeStrokes ?? '–'}
-                  </div>
-                  <div className="eyebrow" style={{ marginTop: 4 }}>
-                    strokes
-                  </div>
-                </div>
-                <button
-                  className="btn btn-accent"
-                  style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0 }}
-                  onClick={() => setActiveStrokes((activeStrokes ?? activeHoleInfo.par) + 1)}
-                >
-                  +
-                </button>
-              </div>
+      <div className="numpad">
+        {NUMPAD_VALUES.map((val) => (
+          <button
+            key={val}
+            className={`numpad-btn ${val === activeHoleInfo.par ? 'is-par' : ''} ${val === activeStrokes ? 'is-selected' : ''}`}
+            onClick={() => setActiveStrokes(val)}
+          >
+            {val}
+          </button>
+        ))}
+      </div>
 
-              {activeStrokes == null ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                  {[activeHoleInfo.par - 1, activeHoleInfo.par, activeHoleInfo.par + 1, activeHoleInfo.par + 2].map((val) => (
-                    <button key={val} className="btn" onClick={() => setActiveStrokes(val)}>
-                      {val}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center' }}>
-                  <span className="pill pill-brass" style={{ fontSize: 13, padding: '6px 14px' }}>
-                    {activePoints} pt{activePoints === 1 ? '' : 's'} · {POINT_LABELS[Math.min(activePoints, 5)] ?? 'Nice'}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          <RoundSummary round={round} groupPlayers={groupPlayers} frontHoles={frontHoles} backHoles={backHoles} scores={scores} myId={myId} />
-        </>
+      {activeStrokes != null && (
+        <div style={{ textAlign: 'center', marginTop: 14 }}>
+          <span className="pill pill-brass" style={{ fontSize: 13, padding: '6px 14px' }}>
+            {activePoints} pt{activePoints === 1 ? '' : 's'} · {POINT_LABELS[Math.min(activePoints, 5)] ?? 'Nice'}
+          </span>
+        </div>
       )}
     </div>
   )
 }
 
-function RoundSummary({ round, groupPlayers, frontHoles, backHoles, scores, myId }) {
+function ScorecardTotals({ round, groupPlayers, frontHoles, backHoles, scores, myId }) {
   const allHoles = useMemo(() => [...frontHoles, ...backHoles], [frontHoles, backHoles])
+
+  const rows = [
+    { key: 'out', label: 'OUT', holes: frontHoles },
+    { key: 'in', label: 'IN', holes: backHoles },
+    { key: 'total', label: 'TOTAL', holes: allHoles, isTotal: true },
+  ]
 
   return (
     <div className="card-flush">
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1.3fr 1fr 1fr 1fr',
-          padding: '10px 14px',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <span className="eyebrow">Player</span>
-        <span className="eyebrow" style={{ textAlign: 'center' }}>
-          Front
-        </span>
-        <span className="eyebrow" style={{ textAlign: 'center' }}>
-          Back
-        </span>
-        <span className="eyebrow" style={{ textAlign: 'center' }}>
-          Total
-        </span>
-      </div>
-      {groupPlayers.map((p) => {
-        const byHole = scores[p.id]?.[round] || {}
-        const front = roundSummary(byHole, frontHoles, p.handicap)
-        const back = roundSummary(byHole, backHoles, p.handicap)
-        const total = roundSummary(byHole, allHoles, p.handicap)
-        return (
-          <div
+      <div className="sc-grid-header" style={{ gridTemplateColumns: `50px repeat(${groupPlayers.length}, 1fr)` }}>
+        <span className="eyebrow">Totals</span>
+        {groupPlayers.map((p) => (
+          <span
             key={p.id}
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1.3fr 1fr 1fr 1fr',
-              alignItems: 'center',
-              padding: '10px 14px',
-              borderBottom: '1px solid var(--border-soft)',
+              fontSize: 10,
+              fontWeight: 700,
+              textAlign: 'center',
+              color: 'var(--text-dim)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-              <span
-                className="avatar"
-                style={{
-                  width: 26,
-                  height: 26,
-                  fontSize: 12,
-                  background: p.photo_url ? 'transparent' : playerColor(p),
-                }}
-              >
-                {p.photo_url ? <img src={p.photo_url} alt="" /> : playerEmoji(p)}
-              </span>
-              <span
-                style={{
-                  fontWeight: 700,
-                  fontSize: 13,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {p.id === myId ? 'You' : p.name}
-              </span>
-            </div>
-            <PeriodCell summary={front} />
-            <PeriodCell summary={back} />
-            <PeriodCell summary={total} emphasize />
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-function PeriodCell({ summary, emphasize }) {
-  if (summary.holesPlayed === 0) {
-    return <div style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>–</div>
-  }
-  return (
-    <div style={{ textAlign: 'center' }}>
-      <div className="num-display" style={{ fontSize: emphasize ? 19 : 16, color: emphasize ? 'var(--brass-light)' : 'var(--text)' }}>
-        {summary.points}
+            {p.id === myId ? 'You' : shortLabel(p.name)}
+          </span>
+        ))}
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--text-faint)' }}>
-        {summary.grossStrokes} ({formatRelativePar(summary.toPar)})
-      </div>
+      {rows.map((row) => (
+        <div
+          key={row.key}
+          className={`sc-totals-row ${row.isTotal ? 'total' : ''}`}
+          style={{ gridTemplateColumns: `50px repeat(${groupPlayers.length}, 1fr)` }}
+        >
+          <span className="sc-totals-label">{row.label}</span>
+          {groupPlayers.map((p) => {
+            const summary = roundSummary(scores[p.id]?.[round] || {}, row.holes, p.handicap)
+            if (summary.holesPlayed === 0) {
+              return (
+                <div key={p.id} style={{ textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>
+                  –
+                </div>
+              )
+            }
+            return (
+              <div key={p.id} style={{ textAlign: 'center' }}>
+                <div
+                  className="num-display"
+                  style={{ fontSize: row.isTotal ? 21 : 16, color: row.isTotal ? 'var(--brass-light)' : 'var(--text)' }}
+                >
+                  {summary.points}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>
+                  {summary.grossStrokes} ({formatRelativePar(summary.toPar)})
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ))}
     </div>
   )
 }

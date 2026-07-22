@@ -16,9 +16,9 @@ export default function TopBar() {
   }
 
   return (
-    <div className="top-bar">
+    <div className="top-bar fairway">
       <div className="brand">
-        <Crest size={22} style={{ color: 'var(--brass)' }} />
+        <Crest size={23} style={{ color: 'var(--brass-light)' }} />
         <span className="brand-word">Golf Boetietjies</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
