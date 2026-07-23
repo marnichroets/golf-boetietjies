@@ -148,7 +148,7 @@ const fieldLabel = {
   fontWeight: 800,
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
-  color: 'var(--brass)',
+  color: 'var(--brass-ink)',
   margin: '12px 0 6px',
 }
 

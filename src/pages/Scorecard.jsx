@@ -16,7 +16,7 @@ function shortLabel(name) {
 }
 
 function cellColor(diff) {
-  if (diff <= -1) return 'var(--brass-light)'
+  if (diff <= -1) return 'var(--brass-ink)'
   if (diff === 0) return 'var(--text)'
   if (diff === 1) return 'var(--text-dim)'
   return 'var(--danger)'
@@ -458,7 +458,7 @@ function ScorecardTotals({ round, groupPlayers, frontHoles, backHoles, scores, m
               <div key={p.id} style={{ textAlign: 'center' }}>
                 <div
                   className="num-display"
-                  style={{ fontSize: row.isTotal ? 21 : 16, color: row.isTotal ? 'var(--brass-light)' : 'var(--text)' }}
+                  style={{ fontSize: row.isTotal ? 21 : 16, color: row.isTotal ? 'var(--brass-ink)' : 'var(--text)' }}
                 >
                   {summary.points}
                 </div>

@@ -86,7 +86,7 @@ export default function Leaderboard() {
                   {row.player.handicap}
                 </div>
               </div>
-              <div className="num-display" style={{ fontSize: 27, color: isLeader ? 'var(--brass-light)' : 'var(--text)' }}>
+              <div className="num-display" style={{ fontSize: 27, color: isLeader ? 'var(--brass-ink)' : 'var(--text)' }}>
                 {row.points}
               </div>
             </div>

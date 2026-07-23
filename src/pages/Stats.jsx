@@ -97,7 +97,7 @@ function StatCard({ Icon, title, name, value }) {
         <div className="eyebrow">{title}</div>
         <div style={{ fontWeight: 700, marginTop: 2 }}>{name}</div>
       </div>
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brass-light)', textAlign: 'right' }}>{value}</div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--brass-ink)', textAlign: 'right' }}>{value}</div>
     </div>
   )
 }

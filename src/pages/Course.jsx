@@ -1,11 +1,31 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
+import { Crest } from '../components/icons'
 
 const FRONT_NINE = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 const BACK_NINE = [10, 11, 12, 13, 14, 15, 16, 17, 18]
 
 function sumBy(holes, key) {
   return holes.reduce((total, h) => total + (h[key] ?? 0), 0)
+}
+
+// Low stroke index = the hardest holes (shots given first) — colour-code so
+// the toughest and easiest holes are scannable at a glance.
+function siStyle(si) {
+  if (si == null) return {}
+  if (si <= 6) {
+    return { background: 'rgba(31, 92, 64, 0.14)', color: 'var(--forest-dark)', border: '1px solid rgba(31, 92, 64, 0.3)' }
+  }
+  if (si <= 12) {
+    return { background: 'var(--surface-hi)', color: 'var(--text-dim)', border: '1px solid var(--border)' }
+  }
+  return { background: 'rgba(171, 124, 30, 0.1)', color: 'var(--brass-ink)', border: '1px solid rgba(171, 124, 30, 0.28)' }
+}
+
+function badgeStyle(par) {
+  if (par <= 3) return { borderColor: 'var(--brass)', color: 'var(--brass-ink)' }
+  if (par >= 5) return { borderColor: 'var(--forest)', color: 'var(--forest-dark)' }
+  return {}
 }
 
 export default function Course() {
@@ -20,11 +40,26 @@ export default function Course() {
   const inPar = sumBy(back, 'par')
   const outMetres = sumBy(front, 'metres')
   const inMetres = sumBy(back, 'metres')
+  const maxMetres = useMemo(() => Math.max(1, ...holes.map((h) => h.metres || 0)), [holes])
 
   return (
     <div>
-      <h1 className="page-title">The Course</h1>
-      <p className="page-subtitle">Zebula Golf Estate — Elephant tees. Know what's coming.</p>
+      <div className="course-hero fairway">
+        <div className="eyebrow">Zebula Golf Estate</div>
+        <div className="course-hero-title">The Course</div>
+        <div className="course-hero-sub">Elephant Tees — know what's coming before you tee off.</div>
+        <div className="course-hero-chips">
+          <span className="course-hero-chip">
+            <strong>Par</strong>72
+          </span>
+          <span className="course-hero-chip">
+            <strong>{(outMetres + inMetres).toLocaleString()}</strong>m
+          </span>
+          <span className="course-hero-chip">
+            <strong>18</strong>holes
+          </span>
+        </div>
+      </div>
 
       <div className="segmented" style={{ marginBottom: 16 }}>
         {[1, 2].map((r) => (
@@ -39,26 +74,53 @@ export default function Course() {
           No course data loaded yet.
         </div>
       ) : (
-        <div className="card-flush">
-          <HeaderRow />
-          <Nine label="Out" holes={front} />
-          <SumRow label="OUT" par={outPar} metres={outMetres} />
-          <Nine label="In" holes={back} />
-          <SumRow label="IN" par={inPar} metres={inMetres} />
-          <SumRow label="TOTAL" par={outPar + inPar} metres={outMetres + inMetres} total />
-        </div>
+        <>
+          <div className="card-flush" style={{ marginBottom: 14 }}>
+            <NineHeading label="Front Nine" range="Holes 1–9" />
+            <TableHead />
+            {front.map((h) => (
+              <HoleRow key={h.hole} hole={h} maxMetres={maxMetres} />
+            ))}
+            <SumRow label="OUT" par={outPar} metres={outMetres} />
+          </div>
+
+          <div className="card-flush" style={{ marginBottom: 14 }}>
+            <NineHeading label="Back Nine" range="Holes 10–18" />
+            <TableHead />
+            {back.map((h) => (
+              <HoleRow key={h.hole} hole={h} maxMetres={maxMetres} />
+            ))}
+            <SumRow label="IN" par={inPar} metres={inMetres} />
+          </div>
+
+          <div className="card-flush">
+            <SumRow label="TOTAL" par={outPar + inPar} metres={outMetres + inMetres} total />
+          </div>
+        </>
       )}
     </div>
   )
 }
 
-function HeaderRow() {
+function NineHeading({ label, range }) {
   return (
-    <div style={rowStyle(true)}>
+    <div className="nine-heading">
+      <Crest size={14} style={{ color: 'var(--brass)' }} />
+      {label}
+      <span className="pill" style={{ marginLeft: 'auto' }}>
+        {range}
+      </span>
+    </div>
+  )
+}
+
+function TableHead() {
+  return (
+    <div className="hole-table-head">
       <span className="eyebrow" style={{ textAlign: 'left' }}>
         Hole
       </span>
-      <span className="eyebrow" style={{ textAlign: 'center' }}>
+      <span className="eyebrow" style={{ textAlign: 'left' }}>
         Par
       </span>
       <span className="eyebrow" style={{ textAlign: 'center' }}>
@@ -71,72 +133,42 @@ function HeaderRow() {
   )
 }
 
-function Nine({ label, holes }) {
+function HoleRow({ hole: h, maxMetres }) {
+  const fillPct = h.metres != null ? Math.max(8, Math.round((h.metres / maxMetres) * 100)) : 0
   return (
-    <div>
-      <div
-        style={{
-          padding: '10px 16px 4px',
-          fontFamily: 'var(--font-display)',
-          fontWeight: 700,
-          fontSize: 13,
-          color: 'var(--brass-light)',
-        }}
-      >
-        {label}
+    <div className="hole-row">
+      <div className="hole-badge" style={badgeStyle(h.par)}>
+        {h.hole}
       </div>
-      {holes.map((h) => (
-        <div key={h.hole} style={rowStyle()}>
-          <span style={{ fontWeight: 700 }}>{h.hole}</span>
-          <span className="num-display" style={{ textAlign: 'center', fontSize: 15 }}>
-            {h.par}
-          </span>
-          <span style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: 13.5 }}>{h.stroke_index}</span>
-          <span style={{ textAlign: 'right', color: 'var(--text-dim)', fontSize: 13.5 }}>
-            {h.metres != null ? `${h.metres} m` : '–'}
-          </span>
-        </div>
-      ))}
+      <span className="num-display" style={{ fontSize: 17 }}>
+        {h.par}
+      </span>
+      <span style={{ display: 'flex', justifyContent: 'center' }}>
+        <span className="si-chip" style={siStyle(h.stroke_index)}>
+          {h.stroke_index}
+        </span>
+      </span>
+      <div className="dist-cell">
+        <span className="num-display" style={{ fontSize: 14 }}>
+          {h.metres != null ? `${h.metres} m` : '–'}
+        </span>
+        {h.metres != null && (
+          <div className="dist-track">
+            <div className="dist-fill" style={{ width: `${fillPct}%` }} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 function SumRow({ label, par, metres, total }) {
   return (
-    <div
-      style={{
-        ...rowStyle(),
-        background: total ? 'rgba(201,162,39,0.14)' : 'rgba(245,239,225,0.03)',
-        borderTop: '1px solid var(--border)',
-        borderBottom: total ? 'none' : '1px solid var(--border)',
-      }}
-    >
-      <span
-        className="eyebrow"
-        style={{ color: total ? 'var(--brass-light)' : 'var(--brass)', letterSpacing: '0.1em' }}
-      >
-        {label}
-      </span>
-      <span className="num-display" style={{ textAlign: 'center', fontSize: 15, color: total ? 'var(--brass-light)' : 'var(--text)' }}>
-        {par}
-      </span>
+    <div className={`course-sum-row ${total ? 'total' : ''}`}>
+      <span className="csr-label">{label}</span>
+      <span className="csr-value">{par}</span>
       <span />
-      <span
-        className="num-display"
-        style={{ textAlign: 'right', fontSize: 15, color: total ? 'var(--brass-light)' : 'var(--text)' }}
-      >
-        {metres} m
-      </span>
+      <span className="csr-dist">{metres.toLocaleString()} m</span>
     </div>
   )
-}
-
-function rowStyle(isHeader) {
-  return {
-    display: 'grid',
-    gridTemplateColumns: '0.9fr 0.8fr 0.8fr 1.1fr',
-    alignItems: 'center',
-    padding: isHeader ? '12px 16px' : '9px 16px',
-    borderBottom: isHeader ? '1px solid var(--border)' : '1px solid var(--border-soft)',
-  }
 }

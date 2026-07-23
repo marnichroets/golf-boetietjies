@@ -55,7 +55,7 @@ export default function Claims() {
                         {holder.photo_url ? <img src={holder.photo_url} alt="" /> : playerEmoji(holder)}
                       </span>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{holder.name}</div>
-                      <div style={{ fontSize: 11, color: isMine ? 'var(--brass-light)' : 'var(--text-faint)', margin: '2px 0 10px' }}>
+                      <div style={{ fontSize: 11, color: isMine ? 'var(--brass-ink)' : 'var(--text-faint)', margin: '2px 0 10px' }}>
                         {isMine ? 'You hold this' : 'holds it'}
                       </div>
                     </>
