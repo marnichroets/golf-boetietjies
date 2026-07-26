@@ -3,6 +3,7 @@ import { useGolfData } from './context/GolfDataContext'
 import { useLocalPlayer } from './context/LocalPlayerContext'
 import BottomNav from './components/BottomNav'
 import TopBar from './components/TopBar'
+import FeedToast from './components/FeedToast'
 import PickPlayer from './pages/PickPlayer'
 import Players from './pages/Players'
 import Scorecard from './pages/Scorecard'
@@ -31,6 +32,7 @@ export default function App() {
 
   return (
     <>
+      <FeedToast />
       <div className="app-main">
         <TopBar />
         <Routes>
