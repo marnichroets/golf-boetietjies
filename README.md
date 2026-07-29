@@ -2,6 +2,8 @@
 
 Live shared Stableford scoreboard for the boys' trip to Zebula. React + Vite, Supabase for realtime shared data, no login — pick your name and go.
 
+<!-- deploy trigger -->
+
 ## Local dev
 
 ```bash
