@@ -68,13 +68,14 @@ body {
   background:
     repeating-linear-gradient(
       118deg,
-      rgba(31, 92, 64, 0.025) 0px,
-      rgba(31, 92, 64, 0.025) 3px,
+      rgba(31, 92, 64, 0.04) 0px,
+      rgba(31, 92, 64, 0.04) 3px,
       transparent 3px,
       transparent 15px
     ),
-    radial-gradient(circle at 18% -8%, rgba(171, 124, 30, 0.12), transparent 42%),
-    radial-gradient(circle at 100% 0%, rgba(31, 92, 64, 0.08), transparent 38%),
+    radial-gradient(circle at 18% -8%, rgba(171, 124, 30, 0.14), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(31, 92, 64, 0.16), transparent 44%),
+    radial-gradient(circle at 0% 100%, rgba(31, 92, 64, 0.1), transparent 40%),
     radial-gradient(ellipse at top, var(--bg-1) 0%, var(--bg-0) 68%);
   background-attachment: fixed;
   color: var(--text);
@@ -92,11 +93,28 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+  -webkit-touch-callout: none;
 }
 
 button {
   font-family: inherit;
   color: inherit;
+}
+
+/* Every screen here is tapped one-handed mid-round — kill the tap-flash
+   flicker, the double-tap-to-zoom delay, and the iOS text-selection
+   callout that a fast, repeated thumb-tap would otherwise trigger. */
+button,
+a,
+.sc-cell,
+.numpad-btn,
+.segmented button,
+.bottom-nav a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 input,
@@ -162,8 +180,14 @@ textarea {
 
 /* ---------- cards & surfaces ---------- */
 
+/* A whisper of mown-fairway texture sits on top of the card surface — kept
+   faint enough (5% stroke opacity) that it reads as paper grain, not
+   something competing with the score numbers printed on it. */
 .card {
-  background: linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg fill='none' stroke='%231f5c40' stroke-width='1' stroke-linecap='round' opacity='0.05'%3E%3Cpath d='M5 34 Q6 24 4 16'/%3E%3Cpath d='M14 34 Q16 23 13 15'/%3E%3Cpath d='M23 34 Q24 24 22 16'/%3E%3Cpath d='M30 34 Q31 23 29 15'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
+  background-size: 34px 34px, auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 16px;
@@ -171,7 +195,10 @@ textarea {
 }
 
 .card-flush {
-  background: linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg fill='none' stroke='%231f5c40' stroke-width='1' stroke-linecap='round' opacity='0.05'%3E%3Cpath d='M5 34 Q6 24 4 16'/%3E%3Cpath d='M14 34 Q16 23 13 15'/%3E%3Cpath d='M23 34 Q24 24 22 16'/%3E%3Cpath d='M30 34 Q31 23 29 15'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
+  background-size: 34px 34px, auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -195,7 +222,7 @@ textarea {
   appearance: none;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
-  background: var(--surface-hi);
+  background: linear-gradient(165deg, var(--surface-hi) 0%, #e7ede0 100%);
   color: var(--text);
   padding: 12px 16px;
   font-size: 14.5px;
@@ -268,7 +295,8 @@ textarea {
   appearance: none;
   border: none;
   border-radius: 12px;
-  padding: 9px 8px;
+  padding: 12px 8px;
+  min-height: 44px;
   font-size: 13px;
   font-weight: 700;
   font-family: var(--font-body);
@@ -349,7 +377,8 @@ textarea {
 .fairway {
   position: relative;
   overflow: hidden;
-  background:
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cg fill='none' stroke='%23e8ca6e' stroke-width='1' stroke-linecap='round' opacity='0.14'%3E%3Cpath d='M5 30 Q6 21 4 14'/%3E%3Cpath d='M13 30 Q15 20 12 13'/%3E%3Cpath d='M21 30 Q22 21 20 14'/%3E%3Cpath d='M27 30 Q28 20 26 13'/%3E%3C/g%3E%3C/svg%3E"),
     repeating-linear-gradient(
       124deg,
       rgba(255, 255, 255, 0.045) 0px,
@@ -366,6 +395,7 @@ textarea {
     ),
     radial-gradient(circle at 50% -30%, rgba(216, 176, 60, 0.32), transparent 58%),
     linear-gradient(165deg, #1f4d38 0%, #163a29 62%, #102a1d 100%);
+  background-size: 30px 30px, auto, auto, auto, auto;
 }
 
 .fairway::after {
@@ -389,10 +419,20 @@ textarea {
   justify-content: space-between;
   gap: 10px;
   padding: 12px 14px;
-  margin: 0 0 16px;
+  margin: 0 0 3px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-md) var(--radius-md) 4px 4px;
   box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* A jagged mown-grass-tip silhouette under the top bar — a small, purely
+   decorative touch that shows up on every screen so the "standing on the
+   green" feel isn't limited to just the fairway banners. */
+.grass-edge {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin: 0 0 16px;
 }
 
 .top-bar > * {
@@ -459,10 +499,8 @@ textarea {
 .bottom-nav a {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
   font-size: 10px;
   font-weight: 700;
   font-family: var(--font-body);
@@ -479,8 +517,24 @@ textarea {
   transition: transform 0.18s var(--ease);
 }
 
+.nav-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 12px 6px;
+  border-radius: 14px;
+  transition: background 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+
 .bottom-nav a.active {
   color: var(--forest);
+}
+
+.bottom-nav a.active .nav-pill {
+  background: linear-gradient(160deg, rgba(31, 92, 64, 0.16), rgba(31, 92, 64, 0.05));
+  box-shadow: inset 0 0 0 1px rgba(31, 92, 64, 0.2);
 }
 
 .bottom-nav a.active svg {
@@ -636,7 +690,7 @@ textarea {
   border-bottom: 1px solid var(--border-strong);
   padding: 11px 10px;
   gap: 4px;
-  background: linear-gradient(180deg, rgba(201, 162, 39, 0.07), transparent);
+  background: linear-gradient(180deg, rgba(31, 92, 64, 0.1), rgba(201, 162, 39, 0.06) 60%, transparent);
 }
 
 .sc-grid-row {
@@ -680,7 +734,8 @@ textarea {
 .sc-cell {
   appearance: none;
   aspect-ratio: 1;
-  max-height: 42px;
+  max-height: 46px;
+  min-height: 44px;
   width: 100%;
   border-radius: 10px;
   font-family: var(--font-display);
@@ -771,7 +826,8 @@ textarea {
   font-weight: 700;
   font-size: 13px;
   letter-spacing: 0.02em;
-  padding: 11px 0;
+  padding: 14px 0;
+  min-height: 46px;
   cursor: pointer;
   transition: transform 0.1s var(--ease), filter 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
@@ -789,13 +845,13 @@ textarea {
 
 .btn-clear {
   appearance: none;
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid var(--border-strong);
-  background: transparent;
+  background: var(--surface-hi);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   padding: 0;
   cursor: pointer;
@@ -804,6 +860,8 @@ textarea {
 
 .btn-clear:active {
   transform: scale(0.9);
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .btn-clear:hover {
@@ -897,7 +955,7 @@ textarea {
   padding: 9px 14px;
   gap: 6px;
   border-bottom: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, rgba(171, 124, 30, 0.08), transparent);
+  background: linear-gradient(180deg, rgba(31, 92, 64, 0.1), rgba(171, 124, 30, 0.06) 60%, transparent);
 }
 
 .hole-row {

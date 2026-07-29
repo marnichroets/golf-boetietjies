@@ -95,13 +95,20 @@ export default function Scorecard() {
 
   // val === 0 is the deliberate "picked up / no score" sentinel and passes
   // through untouched; every other value clamps to the normal 1-15 range.
-  const setActiveStrokes = (val) => {
+  // Doesn't move activeCell — callers that want the bulk-entry auto-advance
+  // do that themselves (see setActiveStrokes below).
+  const writeActiveStrokes = (val) => {
     if (!activeCell) return
     const clamped = val === 0 ? 0 : Math.max(1, Math.min(15, val))
     upsertScore(activeCell.playerId, round, activeCell.hole, clamped)
+  }
 
-    // auto-advance to the next cell: next player on this hole, else first
-    // player on the next hole in this nine — keeps bulk group entry fast.
+  // Used by the numpad and the P/U button: write the value, then jump to
+  // the next cell (next player on this hole, else first player on the next
+  // hole) — keeps bulk group entry fast.
+  const setActiveStrokes = (val) => {
+    if (!activeCell) return
+    writeActiveStrokes(val)
     const playerIdx = groupIds.indexOf(activeCell.playerId)
     const holeIdx = activeHoles.findIndex((h) => h.hole === activeCell.hole)
     if (playerIdx < groupIds.length - 1) {
@@ -112,11 +119,28 @@ export default function Scorecard() {
   }
 
   // Resets the active cell to genuinely unentered — distinct from both P/U
-  // (0, a deliberate no-score) and a real stroke count. Doesn't auto-advance
-  // like setActiveStrokes does, since clearing is a correction, not entry.
+  // (0, a deliberate no-score) and a real stroke count. Doesn't auto-advance,
+  // since clearing is a correction, not entry.
   const clearActiveStrokes = () => {
     if (!activeCell) return
     clearScore(activeCell.playerId, round, activeCell.hole)
+  }
+
+  // Used by the +/- stepper only. Never auto-advances — repeatedly tapping
+  // +/- must keep nudging the same cell, not drift onto the next player's.
+  // Stepping down from 1 clears the cell back to unentered rather than
+  // landing on 0 (P/U is a deliberate choice made via its own button, never
+  // something the stepper should wrap into) or clamping back up to 1
+  // (which would make "-" appear to do nothing/wrap).
+  const stepActiveStrokes = (delta) => {
+    if (!activeCell || !activeHoleInfo) return
+    const current = activeStrokes ?? activeHoleInfo.par
+    const next = current + delta
+    if (next < 1) {
+      clearActiveStrokes()
+    } else {
+      writeActiveStrokes(next)
+    }
   }
 
   const pendingKey = activeCell ? `score:${activeCell.playerId}:${round}:${activeCell.hole}` : null
@@ -209,6 +233,7 @@ export default function Scorecard() {
           isPending={isPending}
           setActiveStrokes={setActiveStrokes}
           clearActiveStrokes={clearActiveStrokes}
+          stepActiveStrokes={stepActiveStrokes}
         />
       )}
 
@@ -314,7 +339,11 @@ function GroupBar({ groupPlayers, myId, onChange }) {
       >
         {groupPlayers.map((p) => (p.id === myId ? 'You' : shortLabel(p.name))).join(', ')}
       </span>
-      <button className="pill pill-brass" style={{ cursor: 'pointer', border: 'none', flexShrink: 0 }} onClick={onChange}>
+      <button
+        className="pill pill-brass"
+        style={{ cursor: 'pointer', border: 'none', flexShrink: 0, padding: '11px 16px', fontSize: 12.5, minHeight: 40 }}
+        onClick={onChange}
+      >
         Change
       </button>
     </div>
@@ -369,6 +398,7 @@ function EntryPanel({
   isPending,
   setActiveStrokes,
   clearActiveStrokes,
+  stepActiveStrokes,
 }) {
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -400,8 +430,8 @@ function EntryPanel({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, margin: '22px 0 20px' }}>
         <button
           className="btn"
-          style={{ width: 50, height: 50, borderRadius: '50%', fontSize: 22, padding: 0, flexShrink: 0 }}
-          onClick={() => setActiveStrokes((activeStrokes ?? activeHoleInfo.par) - 1)}
+          style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0, flexShrink: 0 }}
+          onClick={() => stepActiveStrokes(-1)}
         >
           −
         </button>
@@ -415,8 +445,8 @@ function EntryPanel({
         </div>
         <button
           className="btn btn-accent"
-          style={{ width: 50, height: 50, borderRadius: '50%', fontSize: 22, padding: 0, flexShrink: 0 }}
-          onClick={() => setActiveStrokes((activeStrokes ?? activeHoleInfo.par) + 1)}
+          style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0, flexShrink: 0 }}
+          onClick={() => stepActiveStrokes(1)}
         >
           +
         </button>

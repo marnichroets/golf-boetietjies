@@ -57,11 +57,11 @@ export default function Players() {
             </div>
             <button
               className="btn"
-              style={{ padding: '9px 11px', display: 'flex', alignItems: 'center' }}
+              style={{ width: 44, height: 44, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               onClick={() => setEditing(p)}
               aria-label={`Edit ${p.name}`}
             >
-              <PencilIcon width={16} height={16} />
+              <PencilIcon width={17} height={17} />
             </button>
           </div>
         ))}

@@ -15,8 +15,10 @@ export default function BottomNav() {
     <nav className="bottom-nav">
       {TABS.map(({ to, Icon, label }) => (
         <NavLink key={to} to={to} className={({ isActive }) => (isActive ? 'active' : '')}>
-          <Icon />
-          <span>{label}</span>
+          <span className="nav-pill">
+            <Icon />
+            <span>{label}</span>
+          </span>
         </NavLink>
       ))}
     </nav>
