@@ -101,6 +101,11 @@ export function GolfDataProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'scores' }, (payload) => {
         const row = payload.new?.id ? payload.new : payload.old
         if (!row) return
+        // Without REPLICA IDENTITY FULL on `scores` (see
+        // supabase/allow_clear_scores.sql), a DELETE payload's `old` row only
+        // carries the primary key — player_id/round/hole come back undefined.
+        // Bail out rather than corrupting state under an `undefined` player.
+        if (payload.eventType === 'DELETE' && (row.player_id == null || row.round == null || row.hole == null)) return
         setScores((prev) => {
           const next = { ...prev }
           next[row.player_id] = { 1: { ...next[row.player_id]?.[1] }, 2: { ...next[row.player_id]?.[2] } }
@@ -207,6 +212,35 @@ export function GolfDataProvider({ children }) {
     [scores, players, courseHoles, markPending, logFeedEvent],
   )
 
+  // Resets a cell back to genuinely unentered (not 0/P.U) by deleting its
+  // row from Supabase entirely — there is no "unentered" strokes value to
+  // upsert, since null/undefined can't be stored in the strokes column.
+  const clearScore = useCallback(
+    (playerId, round, hole) => {
+      const key = `score:${playerId}:${round}:${hole}`
+
+      setScores((prev) => {
+        const next = { ...prev }
+        next[playerId] = { 1: { ...next[playerId]?.[1] }, 2: { ...next[playerId]?.[2] } }
+        delete next[playerId][round][hole]
+        return next
+      })
+
+      markPending(key, true)
+      supabase
+        .from('scores')
+        .delete()
+        .eq('player_id', playerId)
+        .eq('round', round)
+        .eq('hole', hole)
+        .then(({ error }) => {
+          if (error) console.error('score clear failed', error)
+          markPending(key, false)
+        })
+    },
+    [markPending],
+  )
+
   const claimCategory = useCallback(
     (category, round, playerId) => {
       const key = `claim:${category}:${round}`
@@ -271,6 +305,7 @@ export function GolfDataProvider({ children }) {
       loading,
       connected,
       upsertScore,
+      clearScore,
       claimCategory,
       updatePlayer,
       uploadPlayerPhoto,

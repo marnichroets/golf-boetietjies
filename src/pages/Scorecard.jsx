@@ -35,7 +35,7 @@ function cellColor(strokes, par) {
 }
 
 export default function Scorecard() {
-  const { players, courseHoles, scores, upsertScore, isPending } = useGolfData()
+  const { players, courseHoles, scores, upsertScore, clearScore, isPending } = useGolfData()
   const { playerId: myId } = useLocalPlayer()
   const { groupIds, setGroupIds, toggleMember } = useFourball()
   const [round, setRound] = useState(1)
@@ -109,6 +109,14 @@ export default function Scorecard() {
     } else if (holeIdx < activeHoles.length - 1) {
       setActiveCell({ playerId: groupIds[0], hole: activeHoles[holeIdx + 1].hole })
     }
+  }
+
+  // Resets the active cell to genuinely unentered — distinct from both P/U
+  // (0, a deliberate no-score) and a real stroke count. Doesn't auto-advance
+  // like setActiveStrokes does, since clearing is a correction, not entry.
+  const clearActiveStrokes = () => {
+    if (!activeCell) return
+    clearScore(activeCell.playerId, round, activeCell.hole)
   }
 
   const pendingKey = activeCell ? `score:${activeCell.playerId}:${round}:${activeCell.hole}` : null
@@ -200,6 +208,7 @@ export default function Scorecard() {
           pendingKey={pendingKey}
           isPending={isPending}
           setActiveStrokes={setActiveStrokes}
+          clearActiveStrokes={clearActiveStrokes}
         />
       )}
 
@@ -359,6 +368,7 @@ function EntryPanel({
   pendingKey,
   isPending,
   setActiveStrokes,
+  clearActiveStrokes,
 }) {
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -372,7 +382,19 @@ function EntryPanel({
             {activeReceived > 0 ? ` · +${activeReceived} shot${activeReceived > 1 ? 's' : ''}` : ''}
           </div>
         </div>
-        <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {activeStrokes != null && (
+            <button
+              className="btn-clear"
+              title="Clear entry"
+              aria-label="Clear entry"
+              onClick={clearActiveStrokes}
+            >
+              ✕
+            </button>
+          )}
+          <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, margin: '22px 0 20px' }}>
