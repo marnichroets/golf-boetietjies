@@ -757,6 +757,36 @@ textarea {
   box-shadow: 0 6px 14px -6px rgba(201, 162, 39, 0.6);
 }
 
+/* ---------- picked-up / blank score control ---------- */
+
+.btn-blank {
+  appearance: none;
+  width: 100%;
+  margin-top: 8px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  padding: 11px 0;
+  cursor: pointer;
+  transition: transform 0.1s var(--ease), filter 0.15s var(--ease), border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.btn-blank:active {
+  transform: scale(0.98);
+}
+
+.btn-blank.is-selected {
+  border-style: solid;
+  border-color: var(--brass);
+  background: rgba(171, 124, 30, 0.1);
+  color: var(--brass-ink);
+}
+
 /* ---------- course scorecard ---------- */
 
 .course-hero {

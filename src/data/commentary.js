@@ -101,6 +101,19 @@ export const COMMENTARY = {
     '{name} landed one near the flag and immediately claimed it.',
   ],
 
+  pickup: [
+    '{name} picked up. Discretion is the better part of golf.',
+    "{name} called it on that hole — sometimes that's the smart play.",
+    '{name} conceded the hole. Zero points, zero regrets.',
+    'A pick-up for {name}. The scorecard forgives, mostly.',
+    '{name} walked off that one early. Fair enough.',
+    'No score for {name} on that hole — moving right along.',
+    '{name} picked up and preserved what dignity remained.',
+    'That hole beat {name}, so {name} beat it to the exit.',
+    '{name} took the zero and the moral high ground.',
+    "{name} picked up. Some holes just aren't worth it.",
+  ],
+
   new_leader: [
     '{name} has taken the lead. Enjoy it while it lasts.',
     'New leader: {name}. Everyone else, time to panic quietly.',

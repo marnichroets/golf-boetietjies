@@ -6,7 +6,7 @@
 create table if not exists feed_events (
   id uuid primary key default gen_random_uuid(),
   type text not null check (
-    type in ('eagle', 'birdie', 'blowup', 'longest_drive', 'nearest_pin', 'new_leader')
+    type in ('eagle', 'birdie', 'blowup', 'pickup', 'longest_drive', 'nearest_pin', 'new_leader')
   ),
   player_id uuid references players(id) on delete cascade,
   message text not null,

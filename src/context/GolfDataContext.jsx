@@ -183,7 +183,12 @@ export function GolfDataProvider({ children }) {
       // re-tapping the same number shouldn't post again.
       if (prevStrokes !== strokes) {
         const holeInfo = (courseHoles[round] || []).find((h) => h.hole === hole)
-        if (holeInfo) {
+        // strokes === 0 is a deliberate pick-up/no-score — it has no real
+        // relationship to par, so it must never fall into the eagle/birdie/
+        // blow-up diff logic below (which assumes a genuine stroke count).
+        if (holeInfo && strokes === 0) {
+          logFeedEvent('pickup', playerId, { round, hole, par: holeInfo.par })
+        } else if (holeInfo && strokes != null) {
           const diff = strokes - holeInfo.par
           let type = null
           if (diff <= -2) type = 'eagle'

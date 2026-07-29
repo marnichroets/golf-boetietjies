@@ -35,7 +35,7 @@ create table if not exists scores (
   player_id uuid not null references players(id) on delete cascade,
   round smallint not null check (round in (1, 2)),
   hole smallint not null check (hole between 1 and 18),
-  strokes smallint check (strokes between 1 and 15),
+  strokes smallint check (strokes between 0 and 15), -- 0 = deliberate pick-up / no score
   updated_at timestamptz not null default now(),
   unique (player_id, round, hole)
 );

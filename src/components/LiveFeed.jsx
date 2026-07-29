@@ -7,6 +7,7 @@ const TYPE_META = {
   eagle: { label: 'Eagle', className: 'feed-tag-gold' },
   birdie: { label: 'Birdie', className: 'feed-tag-gold' },
   blowup: { label: 'Blow-up', className: 'feed-tag-danger' },
+  pickup: { label: 'Picked Up', className: 'feed-tag-brass' },
   longest_drive: { label: 'Longest Drive', className: 'feed-tag-brass' },
   nearest_pin: { label: 'Nearest Pin', className: 'feed-tag-brass' },
   new_leader: { label: 'New Leader', className: 'feed-tag-forest' },

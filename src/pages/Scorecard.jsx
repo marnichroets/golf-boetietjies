@@ -15,7 +15,19 @@ function shortLabel(name) {
   return `${parts[0]} ${parts[parts.length - 1][0]}.`
 }
 
-function cellColor(diff) {
+// strokes === 0 is the deliberate "picked up / no score" sentinel — it must
+// never be run through par-diff colouring (0 - par would read as a wild
+// eagle) or shown as the literal number 0.
+function cellLabel(strokes) {
+  if (strokes == null) return '–'
+  if (strokes === 0) return 'P/U'
+  return strokes
+}
+
+function cellColor(strokes, par) {
+  if (strokes == null) return 'var(--text-faint)'
+  if (strokes === 0) return 'var(--brass-ink)'
+  const diff = strokes - par
   if (diff <= -1) return 'var(--brass-ink)'
   if (diff === 0) return 'var(--text)'
   if (diff === 1) return 'var(--text-dim)'
@@ -81,9 +93,11 @@ export default function Scorecard() {
   const activeReceived =
     activeHoleInfo && activePlayer ? strokesReceived(activePlayer.handicap, activeHoleInfo.stroke_index) : 0
 
+  // val === 0 is the deliberate "picked up / no score" sentinel and passes
+  // through untouched; every other value clamps to the normal 1-15 range.
   const setActiveStrokes = (val) => {
     if (!activeCell) return
-    const clamped = Math.max(1, Math.min(15, val))
+    const clamped = val === 0 ? 0 : Math.max(1, Math.min(15, val))
     upsertScore(activeCell.playerId, round, activeCell.hole, clamped)
 
     // auto-advance to the next cell: next player on this hole, else first
@@ -162,10 +176,11 @@ export default function Scorecard() {
                   style={{
                     border: isActive ? '1.5px solid var(--brass)' : '1px solid var(--border)',
                     background: isActive ? 'rgba(201,162,39,0.16)' : 'var(--surface-hi)',
-                    color: strokes == null ? 'var(--text-faint)' : cellColor(strokes - h.par),
+                    color: cellColor(strokes, h.par),
+                    fontSize: strokes === 0 ? 12 : undefined,
                   }}
                 >
-                  {strokes ?? '–'}
+                  {cellLabel(strokes)}
                 </button>
               )
             })}
@@ -369,11 +384,11 @@ function EntryPanel({
           −
         </button>
         <div style={{ textAlign: 'center', minWidth: 96 }}>
-          <div className="num-display" style={{ fontSize: 66, lineHeight: 1 }}>
-            {activeStrokes ?? '–'}
+          <div className="num-display" style={{ fontSize: activeStrokes === 0 ? 40 : 66, lineHeight: 1 }}>
+            {activeStrokes === 0 ? 'P/U' : (activeStrokes ?? '–')}
           </div>
           <div className="eyebrow" style={{ marginTop: 4 }}>
-            strokes
+            {activeStrokes === 0 ? 'picked up' : 'strokes'}
           </div>
         </div>
         <button
@@ -397,10 +412,17 @@ function EntryPanel({
         ))}
       </div>
 
+      <button
+        className={`btn-blank ${activeStrokes === 0 ? 'is-selected' : ''}`}
+        onClick={() => setActiveStrokes(0)}
+      >
+        Picked up · no score
+      </button>
+
       {activeStrokes != null && (
         <div style={{ textAlign: 'center', marginTop: 14 }}>
           <span className="pill pill-brass" style={{ fontSize: 13, padding: '6px 14px' }}>
-            {activePoints} pt{activePoints === 1 ? '' : 's'} · {POINT_LABELS[Math.min(activePoints, 5)] ?? 'Nice'}
+            {activeStrokes === 0 ? 'Picked up · 0 pts' : `${activePoints} pt${activePoints === 1 ? '' : 's'} · ${POINT_LABELS[Math.min(activePoints, 5)] ?? 'Nice'}`}
           </span>
         </div>
       )}
@@ -463,7 +485,7 @@ function ScorecardTotals({ round, groupPlayers, frontHoles, backHoles, scores, m
                   {summary.points}
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>
-                  {summary.grossStrokes} ({formatRelativePar(summary.toPar)})
+                  {summary.parPlayed === 0 ? 'P/U' : `${summary.grossStrokes} (${formatRelativePar(summary.toPar)})`}
                 </div>
               </div>
             )
