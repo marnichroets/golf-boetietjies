@@ -8,3 +8,5 @@ export const supabase = createClient(url, anonKey, {
     params: { eventsPerSecond: 10 },
   },
 })
+
+if (import.meta.env.DEV) window.__supabase = supabase

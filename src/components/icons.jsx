@@ -147,6 +147,23 @@ export function SnowflakeIcon(props) {
   )
 }
 
+export function ShieldIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M12 3 19 5.5V11c0 5-3 8.5-7 10-4-1.5-7-5-7-10V5.5Z" />
+      <path d="M9 12l2 2 4-4.5" />
+    </svg>
+  )
+}
+
+export function StarIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M12 3.5 14.6 9 20.5 9.8 16.2 13.8 17.3 19.7 12 16.9 6.7 19.7 7.8 13.8 3.5 9.8 9.4 9 12 3.5Z" />
+    </svg>
+  )
+}
+
 export function Crest({ size = 22, ...rest }) {
   return (
     <svg

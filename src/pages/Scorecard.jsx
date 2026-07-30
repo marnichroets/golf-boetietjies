@@ -2,17 +2,41 @@ import { useEffect, useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { useFourball, MAX_GROUP } from '../hooks/useFourball'
-import { holePoints, strokesReceived, roundSummary, formatRelativePar } from '../utils/stableford'
+import { roundSummary, formatRelativePar } from '../utils/stableford'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import { CheckIcon, UsersIcon } from '../components/icons'
 
-const POINT_LABELS = { 0: 'Blow up', 1: 'Bogey', 2: 'Par', 3: 'Birdie', 4: 'Eagle', 5: 'Albatross' }
 const NUMPAD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 function shortLabel(name) {
   const parts = name.trim().split(/\s+/)
   if (parts.length === 1) return parts[0]
   return `${parts[0]} ${parts[parts.length - 1][0]}.`
+}
+
+// shortLabel() collides whenever two players' names reduce to the same
+// "First L." form (e.g. "Player 10" and "Player 13" both shorten to
+// "Player 1.") — which reads exactly like the same player got added to
+// the group twice. Falls back to the full name for anyone involved in a
+// collision so the group bar/header/totals never show two players as if
+// they were one.
+function buildLabels(groupPlayers, myId) {
+  const counts = {}
+  for (const p of groupPlayers) {
+    if (p.id === myId) continue
+    const label = shortLabel(p.name)
+    counts[label] = (counts[label] || 0) + 1
+  }
+  const labels = {}
+  for (const p of groupPlayers) {
+    if (p.id === myId) {
+      labels[p.id] = 'You'
+    } else {
+      const label = shortLabel(p.name)
+      labels[p.id] = counts[label] > 1 ? p.name : label
+    }
+  }
+  return labels
 }
 
 // strokes === 0 is the deliberate "picked up / no score" sentinel — it must
@@ -62,6 +86,7 @@ export default function Scorecard() {
   const activeHoles = nine === 'front' ? frontHoles : backHoles
 
   const groupPlayers = groupIds.map((id) => players.find((p) => p.id === id)).filter(Boolean)
+  const labels = useMemo(() => buildLabels(groupPlayers, myId), [groupPlayers, myId])
 
   useEffect(() => {
     const stillValid =
@@ -80,23 +105,8 @@ export default function Scorecard() {
   const activePlayer = activeCell && players.find((p) => p.id === activeCell.playerId)
   const activeStrokes = activeCell ? (scores[activeCell.playerId]?.[round]?.[activeCell.hole] ?? null) : null
 
-  const activePoints = useMemo(() => {
-    if (!activeHoleInfo || !activePlayer) return null
-    return holePoints({
-      strokes: activeStrokes,
-      par: activeHoleInfo.par,
-      handicap: activePlayer.handicap,
-      strokeIndex: activeHoleInfo.stroke_index,
-    })
-  }, [activeStrokes, activeHoleInfo, activePlayer])
-
-  const activeReceived =
-    activeHoleInfo && activePlayer ? strokesReceived(activePlayer.handicap, activeHoleInfo.stroke_index) : 0
-
   // val === 0 is the deliberate "picked up / no score" sentinel and passes
   // through untouched; every other value clamps to the normal 1-15 range.
-  // Doesn't move activeCell — callers that want the bulk-entry auto-advance
-  // do that themselves (see setActiveStrokes below).
   const writeActiveStrokes = (val) => {
     if (!activeCell) return
     const clamped = val === 0 ? 0 : Math.max(1, Math.min(15, val))
@@ -124,23 +134,6 @@ export default function Scorecard() {
   const clearActiveStrokes = () => {
     if (!activeCell) return
     clearScore(activeCell.playerId, round, activeCell.hole)
-  }
-
-  // Used by the +/- stepper only. Never auto-advances — repeatedly tapping
-  // +/- must keep nudging the same cell, not drift onto the next player's.
-  // Stepping down from 1 clears the cell back to unentered rather than
-  // landing on 0 (P/U is a deliberate choice made via its own button, never
-  // something the stepper should wrap into) or clamping back up to 1
-  // (which would make "-" appear to do nothing/wrap).
-  const stepActiveStrokes = (delta) => {
-    if (!activeCell || !activeHoleInfo) return
-    const current = activeStrokes ?? activeHoleInfo.par
-    const next = current + delta
-    if (next < 1) {
-      clearActiveStrokes()
-    } else {
-      writeActiveStrokes(next)
-    }
   }
 
   const pendingKey = activeCell ? `score:${activeCell.playerId}:${round}:${activeCell.hole}` : null
@@ -171,7 +164,7 @@ export default function Scorecard() {
         ))}
       </div>
 
-      <GroupBar groupPlayers={groupPlayers} myId={myId} onChange={() => setEditingGroup(true)} />
+      <GroupBar groupPlayers={groupPlayers} labels={labels} onChange={() => setEditingGroup(true)} />
 
       <div className="segmented" style={{ marginBottom: 14 }}>
         <button className={nine === 'front' ? 'active' : ''} onClick={() => setNine('front')}>
@@ -182,8 +175,8 @@ export default function Scorecard() {
         </button>
       </div>
 
-      <div className="card-flush" style={{ marginBottom: 16 }}>
-        <GridHeaderRow groupPlayers={groupPlayers} myId={myId} />
+      <div className="card-flush" style={{ marginBottom: 14 }}>
+        <GridHeaderRow groupPlayers={groupPlayers} labels={labels} />
         {activeHoles.map((h) => (
           <div
             key={h.hole}
@@ -220,30 +213,25 @@ export default function Scorecard() {
         ))}
       </div>
 
-      {activeCell && activeHoleInfo && activePlayer && (
-        <EntryPanel
-          activeCell={activeCell}
-          activeHoleInfo={activeHoleInfo}
-          activePlayer={activePlayer}
-          activeStrokes={activeStrokes}
-          activePoints={activePoints}
-          activeReceived={activeReceived}
-          myId={myId}
-          pendingKey={pendingKey}
-          isPending={isPending}
-          setActiveStrokes={setActiveStrokes}
-          clearActiveStrokes={clearActiveStrokes}
-          stepActiveStrokes={stepActiveStrokes}
-        />
-      )}
+      <NumberPad
+        activeCell={activeCell}
+        activeHoleInfo={activeHoleInfo}
+        activePlayer={activePlayer}
+        activeStrokes={activeStrokes}
+        labels={labels}
+        pendingKey={pendingKey}
+        isPending={isPending}
+        setActiveStrokes={setActiveStrokes}
+        clearActiveStrokes={clearActiveStrokes}
+      />
 
       <ScorecardTotals
         round={round}
         groupPlayers={groupPlayers}
+        labels={labels}
         frontHoles={frontHoles}
         backHoles={backHoles}
         scores={scores}
-        myId={myId}
       />
     </div>
   )
@@ -304,7 +292,7 @@ function FourballPicker({ players, groupIds, toggleMember, myId, hasExistingGrou
   )
 }
 
-function GroupBar({ groupPlayers, myId, onChange }) {
+function GroupBar({ groupPlayers, labels, onChange }) {
   return (
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 14 }}>
       <UsersIcon width={16} height={16} style={{ color: 'var(--brass)', flexShrink: 0 }} />
@@ -337,7 +325,7 @@ function GroupBar({ groupPlayers, myId, onChange }) {
           whiteSpace: 'nowrap',
         }}
       >
-        {groupPlayers.map((p) => (p.id === myId ? 'You' : shortLabel(p.name))).join(', ')}
+        {groupPlayers.map((p) => labels[p.id]).join(', ')}
       </span>
       <button
         className="pill pill-brass"
@@ -350,7 +338,7 @@ function GroupBar({ groupPlayers, myId, onChange }) {
   )
 }
 
-function GridHeaderRow({ groupPlayers, myId }) {
+function GridHeaderRow({ groupPlayers, labels }) {
   return (
     <div className="sc-grid-header" style={{ gridTemplateColumns: `50px repeat(${groupPlayers.length}, 1fr)` }}>
       <span className="eyebrow">Hole</span>
@@ -378,7 +366,7 @@ function GridHeaderRow({ groupPlayers, myId }) {
               maxWidth: '100%',
             }}
           >
-            {p.id === myId ? 'You' : shortLabel(p.name)}
+            {labels[p.id]}
           </span>
         </div>
       ))}
@@ -386,77 +374,41 @@ function GridHeaderRow({ groupPlayers, myId }) {
   )
 }
 
-function EntryPanel({
+// Permanent, always-on entry pad — tap a cell in the grid above, then tap a
+// digit here to write it and auto-advance. Sticks to the bottom of the
+// viewport (above the bottom nav) once you scroll past it, so it stays in
+// thumb's reach through a full 9/18-hole bulk-entry pass instead of forcing
+// a scroll back up between every tap.
+function NumberPad({
   activeCell,
   activeHoleInfo,
   activePlayer,
   activeStrokes,
-  activePoints,
-  activeReceived,
-  myId,
+  labels,
   pendingKey,
   isPending,
   setActiveStrokes,
   clearActiveStrokes,
-  stepActiveStrokes,
 }) {
-  return (
-    <div className="card" style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <div className="eyebrow">
-            Hole {activeCell.hole} · {activePlayer.id === myId ? 'You' : activePlayer.name}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 2 }}>
-            Par {activeHoleInfo.par} · SI {activeHoleInfo.stroke_index}
-            {activeReceived > 0 ? ` · +${activeReceived} shot${activeReceived > 1 ? 's' : ''}` : ''}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {activeStrokes != null && (
-            <button
-              className="btn-clear"
-              title="Clear entry"
-              aria-label="Clear entry"
-              onClick={clearActiveStrokes}
-            >
-              ✕
-            </button>
-          )}
-          <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
-        </div>
-      </div>
+  const hasActive = Boolean(activeCell && activeHoleInfo && activePlayer)
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 22, margin: '22px 0 20px' }}>
-        <button
-          className="btn"
-          style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0, flexShrink: 0 }}
-          onClick={() => stepActiveStrokes(-1)}
-        >
-          −
-        </button>
-        <div style={{ textAlign: 'center', minWidth: 96 }}>
-          <div className="num-display" style={{ fontSize: activeStrokes === 0 ? 40 : 66, lineHeight: 1 }}>
-            {activeStrokes === 0 ? 'P/U' : (activeStrokes ?? '–')}
-          </div>
-          <div className="eyebrow" style={{ marginTop: 4 }}>
-            {activeStrokes === 0 ? 'picked up' : 'strokes'}
-          </div>
-        </div>
-        <button
-          className="btn btn-accent"
-          style={{ width: 54, height: 54, borderRadius: '50%', fontSize: 24, padding: 0, flexShrink: 0 }}
-          onClick={() => stepActiveStrokes(1)}
-        >
-          +
-        </button>
+  return (
+    <div className="card-flush numpad-panel" style={{ marginBottom: 16 }}>
+      <div className="numpad-context">
+        <span>
+          {hasActive
+            ? `Hole ${activeCell.hole} · ${labels[activePlayer.id] ?? activePlayer.name} · Par ${activeHoleInfo.par}`
+            : 'Tap a cell to enter a score'}
+        </span>
+        <span className={`sync-dot ${pendingKey && isPending(pendingKey) ? 'pending' : ''}`} />
       </div>
 
       <div className="numpad">
         {NUMPAD_VALUES.map((val) => (
           <button
             key={val}
-            className={`numpad-btn ${val === activeHoleInfo.par ? 'is-par' : ''} ${val === activeStrokes ? 'is-selected' : ''}`}
+            className={`numpad-btn ${hasActive && val === activeHoleInfo.par ? 'is-par' : ''} ${val === activeStrokes ? 'is-selected' : ''}`}
+            disabled={!hasActive}
             onClick={() => setActiveStrokes(val)}
           >
             {val}
@@ -464,25 +416,27 @@ function EntryPanel({
         ))}
       </div>
 
-      <button
-        className={`btn-blank ${activeStrokes === 0 ? 'is-selected' : ''}`}
-        onClick={() => setActiveStrokes(0)}
-      >
-        Picked up · no score
-      </button>
-
-      {activeStrokes != null && (
-        <div style={{ textAlign: 'center', marginTop: 14 }}>
-          <span className="pill pill-brass" style={{ fontSize: 13, padding: '6px 14px' }}>
-            {activeStrokes === 0 ? 'Picked up · 0 pts' : `${activePoints} pt${activePoints === 1 ? '' : 's'} · ${POINT_LABELS[Math.min(activePoints, 5)] ?? 'Nice'}`}
-          </span>
-        </div>
-      )}
+      <div className="numpad-actions">
+        <button
+          className={`btn-blank numpad-action ${activeStrokes === 0 ? 'is-selected' : ''}`}
+          disabled={!hasActive}
+          onClick={() => setActiveStrokes(0)}
+        >
+          Picked up (P/U)
+        </button>
+        <button
+          className="numpad-action numpad-action-clear"
+          disabled={!hasActive || activeStrokes == null}
+          onClick={clearActiveStrokes}
+        >
+          Clear
+        </button>
+      </div>
     </div>
   )
 }
 
-function ScorecardTotals({ round, groupPlayers, frontHoles, backHoles, scores, myId }) {
+function ScorecardTotals({ round, groupPlayers, labels, frontHoles, backHoles, scores }) {
   const allHoles = useMemo(() => [...frontHoles, ...backHoles], [frontHoles, backHoles])
 
   const rows = [
@@ -508,7 +462,7 @@ function ScorecardTotals({ round, groupPlayers, frontHoles, backHoles, scores, m
               textOverflow: 'ellipsis',
             }}
           >
-            {p.id === myId ? 'You' : shortLabel(p.name)}
+            {labels[p.id]}
           </span>
         ))}
       </div>

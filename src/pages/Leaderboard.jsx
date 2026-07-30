@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { roundSummary } from '../utils/stableford'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
-import LiveFeed from '../components/LiveFeed'
 
 const VIEWS = [
   { key: 'combined', label: 'Combined' },
@@ -94,8 +93,6 @@ export default function Leaderboard() {
           )
         })}
       </div>
-
-      <LiveFeed />
     </div>
   )
 }

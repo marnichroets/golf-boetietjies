@@ -1,10 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { roundSummary } from '../utils/stableford'
-import { pickCommentary } from '../data/commentary'
 
 const GolfDataContext = createContext(null)
-const FEED_LIMIT = 20
 
 function groupHolesByRound(rows) {
   const byRound = { 1: [], 2: [] }
@@ -33,30 +30,17 @@ function claimsToMap(rows) {
   return map
 }
 
-// Combined (round 1 + round 2) Stableford leader, replicating the
-// Leaderboard's "Combined" view — used to detect a change of top spot.
-// Returns null if nobody has posted points yet.
-function computeLeaderId(players, scoresObj, courseHoles) {
-  let leader = null
-  for (const p of players) {
-    const r1 = roundSummary(scoresObj[p.id]?.[1] || {}, courseHoles[1] || [], p.handicap)
-    const r2 = roundSummary(scoresObj[p.id]?.[2] || {}, courseHoles[2] || [], p.handicap)
-    const points = r1.points + r2.points
-    const holesPlayed = r1.holesPlayed + r2.holesPlayed
-    if (!leader || points > leader.points || (points === leader.points && holesPlayed > leader.holesPlayed)) {
-      leader = { id: p.id, points, holesPlayed }
-    }
-  }
-  return leader && leader.points > 0 ? leader.id : null
-}
-
 export function GolfDataProvider({ children }) {
   const [players, setPlayers] = useState([])
   const [courseHoles, setCourseHoles] = useState({ 1: [], 2: [] })
   const [scores, setScores] = useState({}) // { [playerId]: { 1: {hole: strokes}, 2: {...} } }
   const [claims, setClaims] = useState({}) // { "category:round": row }
-  const [feedEvents, setFeedEvents] = useState([]) // newest first, capped at FEED_LIMIT
-  const [latestEvent, setLatestEvent] = useState(null) // set only by realtime inserts, for toasts
+  // Ryder Cup layer — OFF unless the app_settings row (or table) says
+  // otherwise, so a fresh/un-migrated database behaves exactly like the
+  // individual-only app.
+  const [ryderCupEnabled, setRyderCupEnabledState] = useState(false)
+  const [teams, setTeams] = useState([])
+  const [pairings, setPairings] = useState([])
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(true)
   const pendingRef = useRef(new Set())
@@ -66,7 +50,7 @@ export function GolfDataProvider({ children }) {
     let cancelled = false
 
     async function load() {
-      const [playersRes, holesRes, scoresRes, claimsRes, feedRes] = await Promise.all([
+      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes] = await Promise.all([
         supabase
           .from('players')
           .select('*')
@@ -75,14 +59,21 @@ export function GolfDataProvider({ children }) {
         supabase.from('course_holes').select('*'),
         supabase.from('scores').select('*'),
         supabase.from('claims').select('*'),
-        supabase.from('feed_events').select('*').order('created_at', { ascending: false }).limit(FEED_LIMIT),
+        // These three tables (supabase/ryder_cup.sql) are optional — on a
+        // database that hasn't run that migration yet, these queries just
+        // error out and the Ryder Cup layer quietly stays off/empty.
+        supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
+        supabase.from('teams').select('*').order('created_at', { ascending: true }),
+        supabase.from('pairings').select('*'),
       ])
       if (cancelled) return
       if (playersRes.data) setPlayers(playersRes.data)
       if (holesRes.data) setCourseHoles(groupHolesByRound(holesRes.data))
       if (scoresRes.data) setScores(scoresToNested(scoresRes.data))
       if (claimsRes.data) setClaims(claimsToMap(claimsRes.data))
-      if (feedRes.data) setFeedEvents(feedRes.data)
+      if (settingsRes.data) setRyderCupEnabledState(!!settingsRes.data.ryder_cup_enabled)
+      if (teamsRes.data) setTeams(teamsRes.data)
+      if (pairingsRes.data) setPairings(pairingsRes.data)
       setLoading(false)
     }
 
@@ -122,12 +113,15 @@ export function GolfDataProvider({ children }) {
         if (!row) return
         setClaims((prev) => ({ ...prev, [`${row.category}:${row.round}`]: payload.new ?? row }))
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'feed_events' }, (payload) => {
-        setFeedEvents((prev) => {
-          if (prev.some((e) => e.id === payload.new.id)) return prev
-          return [payload.new, ...prev].slice(0, FEED_LIMIT)
-        })
-        setLatestEvent(payload.new)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_settings' }, (payload) => {
+        if (!payload.new) return
+        setRyderCupEnabledState(!!payload.new.ryder_cup_enabled)
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, (payload) => {
+        setTeams((prev) => applyRowChange(prev, payload))
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pairings' }, (payload) => {
+        setPairings((prev) => applyRowChange(prev, payload))
       })
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED')
@@ -144,33 +138,16 @@ export function GolfDataProvider({ children }) {
     setPendingVersion((v) => v + 1)
   }, [])
 
-  // Fire-and-forget commentary post — never blocks or throws into caller.
-  const logFeedEvent = useCallback(
-    (type, playerId, extra = {}) => {
-      const player = players.find((p) => p.id === playerId)
-      if (!player) return
-      const message = pickCommentary(type, player.name)
-      if (!message) return
-      supabase
-        .from('feed_events')
-        .insert({ type, player_id: playerId, message, ...extra })
-        .then(({ error }) => {
-          if (error) console.error('feed event failed', error)
-        })
-    },
-    [players],
-  )
-
   const upsertScore = useCallback(
     (playerId, round, hole, strokes) => {
       const key = `score:${playerId}:${round}:${hole}`
-      const prevScores = scores
-      const prevStrokes = prevScores[playerId]?.[round]?.[hole] ?? null
 
-      const nextScores = { ...prevScores }
-      nextScores[playerId] = { 1: { ...nextScores[playerId]?.[1] }, 2: { ...nextScores[playerId]?.[2] } }
-      nextScores[playerId][round][hole] = strokes
-      setScores(nextScores)
+      setScores((prev) => {
+        const next = { ...prev }
+        next[playerId] = { 1: { ...next[playerId]?.[1] }, 2: { ...next[playerId]?.[2] } }
+        next[playerId][round][hole] = strokes
+        return next
+      })
 
       markPending(key, true)
       supabase
@@ -183,33 +160,8 @@ export function GolfDataProvider({ children }) {
           if (error) console.error('score sync failed', error)
           markPending(key, false)
         })
-
-      // Commentary only reacts to an actual change in this cell's value —
-      // re-tapping the same number shouldn't post again.
-      if (prevStrokes !== strokes) {
-        const holeInfo = (courseHoles[round] || []).find((h) => h.hole === hole)
-        // strokes === 0 is a deliberate pick-up/no-score — it has no real
-        // relationship to par, so it must never fall into the eagle/birdie/
-        // blow-up diff logic below (which assumes a genuine stroke count).
-        if (holeInfo && strokes === 0) {
-          logFeedEvent('pickup', playerId, { round, hole, par: holeInfo.par })
-        } else if (holeInfo && strokes != null) {
-          const diff = strokes - holeInfo.par
-          let type = null
-          if (diff <= -2) type = 'eagle'
-          else if (diff === -1) type = 'birdie'
-          else if (diff >= 3) type = 'blowup'
-          if (type) logFeedEvent(type, playerId, { round, hole, strokes, par: holeInfo.par })
-        }
-
-        const prevLeader = computeLeaderId(players, prevScores, courseHoles)
-        const nextLeader = computeLeaderId(players, nextScores, courseHoles)
-        if (nextLeader && nextLeader !== prevLeader) {
-          logFeedEvent('new_leader', nextLeader, { round, hole })
-        }
-      }
     },
-    [scores, players, courseHoles, markPending, logFeedEvent],
+    [markPending],
   )
 
   // Resets a cell back to genuinely unentered (not 0/P.U) by deleting its
@@ -257,10 +209,8 @@ export function GolfDataProvider({ children }) {
           if (error) console.error('claim sync failed', error)
           markPending(key, false)
         })
-
-      if (playerId) logFeedEvent(category, playerId, { round })
     },
-    [markPending, logFeedEvent],
+    [markPending],
   )
 
   const updatePlayer = useCallback(
@@ -279,6 +229,47 @@ export function GolfDataProvider({ children }) {
     },
     [markPending],
   )
+
+  // Shared across every phone via the app_settings singleton row — this is
+  // the one and only on/off switch for the whole Ryder Cup layer.
+  const setRyderCupEnabled = useCallback((enabled) => {
+    setRyderCupEnabledState(enabled)
+    supabase
+      .from('app_settings')
+      .update({ ryder_cup_enabled: enabled, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .then(({ error }) => {
+        if (error) console.error('ryder cup toggle sync failed', error)
+      })
+  }, [])
+
+  const updateTeam = useCallback((id, patch) => {
+    setTeams((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+    supabase
+      .from('teams')
+      .update(patch)
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) console.error('team sync failed', error)
+      })
+  }, [])
+
+  // One row per (round, match_number) slot — upserting always overwrites
+  // whatever pairing already lived in that slot.
+  const savePairing = useCallback(({ round, matchNumber, format, sideA, sideB }) => {
+    const row = { round, match_number: matchNumber, format, side_a: sideA, side_b: sideB, updated_at: new Date().toISOString() }
+    setPairings((prev) => {
+      const exists = prev.some((p) => p.round === round && p.match_number === matchNumber)
+      if (exists) return prev.map((p) => (p.round === round && p.match_number === matchNumber ? { ...p, ...row } : p))
+      return [...prev, row]
+    })
+    supabase
+      .from('pairings')
+      .upsert(row, { onConflict: 'round,match_number' })
+      .then(({ error }) => {
+        if (error) console.error('pairing sync failed', error)
+      })
+  }, [])
 
   const uploadPlayerPhoto = useCallback(async (playerId, file) => {
     const ext = file.name.split('.').pop()
@@ -300,19 +291,23 @@ export function GolfDataProvider({ children }) {
       courseHoles,
       scores,
       claims,
-      feedEvents,
-      latestEvent,
       loading,
       connected,
+      ryderCupEnabled,
+      teams,
+      pairings,
       upsertScore,
       clearScore,
       claimCategory,
       updatePlayer,
       uploadPlayerPhoto,
       isPending,
+      setRyderCupEnabled,
+      updateTeam,
+      savePairing,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players, courseHoles, scores, claims, feedEvents, latestEvent, loading, connected, pendingVersion],
+    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, pendingVersion],
   )
 
   return <GolfDataContext.Provider value={value}>{children}</GolfDataContext.Provider>

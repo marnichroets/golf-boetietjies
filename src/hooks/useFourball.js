@@ -3,12 +3,16 @@ import { useCallback, useEffect, useState } from 'react'
 const STORAGE_KEY = 'gb_fourball_ids'
 export const MAX_GROUP = 4
 
+function dedupe(ids) {
+  return Array.from(new Set(ids))
+}
+
 function readStored() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : null
+    return Array.isArray(parsed) ? dedupe(parsed) : null
   } catch {
     return null
   }
@@ -19,21 +23,35 @@ function readStored() {
 // Starts empty (rather than defaulting to "just me") so first-time use always
 // surfaces the picker step.
 export function useFourball() {
-  const [groupIds, setGroupIds] = useState(() => readStored() || [])
+  const [groupIds, setGroupIdsRaw] = useState(() => readStored() || [])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(groupIds))
   }, [groupIds])
 
-  const toggleMember = useCallback((id) => {
-    setGroupIds((prev) => {
-      if (prev.includes(id)) return prev.filter((x) => x !== id)
-      if (prev.length >= MAX_GROUP) return prev
-      return [...prev, id]
+  // Every write funnels through here and gets deduped — so no caller
+  // (including direct setGroupIds calls, not just toggleMember) can ever
+  // land the same player id twice in the group, regardless of how it got
+  // called or what was already sitting in localStorage.
+  const setGroupIds = useCallback((updater) => {
+    setGroupIdsRaw((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      return dedupe(next)
     })
   }, [])
 
-  const clearGroup = useCallback(() => setGroupIds([]), [])
+  const toggleMember = useCallback(
+    (id) => {
+      setGroupIds((prev) => {
+        if (prev.includes(id)) return prev.filter((x) => x !== id)
+        if (prev.length >= MAX_GROUP) return prev
+        return [...prev, id]
+      })
+    },
+    [setGroupIds],
+  )
+
+  const clearGroup = useCallback(() => setGroupIds([]), [setGroupIds])
 
   return { groupIds, setGroupIds, toggleMember, clearGroup }
 }
