@@ -66,16 +66,8 @@ body {
 body {
   margin: 0;
   background:
-    repeating-linear-gradient(
-      118deg,
-      rgba(31, 92, 64, 0.04) 0px,
-      rgba(31, 92, 64, 0.04) 3px,
-      transparent 3px,
-      transparent 15px
-    ),
-    radial-gradient(circle at 18% -8%, rgba(171, 124, 30, 0.14), transparent 42%),
-    radial-gradient(circle at 100% 0%, rgba(31, 92, 64, 0.16), transparent 44%),
-    radial-gradient(circle at 0% 100%, rgba(31, 92, 64, 0.1), transparent 40%),
+    radial-gradient(circle at 18% -8%, rgba(171, 124, 30, 0.1), transparent 42%),
+    radial-gradient(circle at 100% 0%, rgba(31, 92, 64, 0.14), transparent 44%),
     radial-gradient(ellipse at top, var(--bg-1) 0%, var(--bg-0) 68%);
   background-attachment: fixed;
   color: var(--text);
@@ -180,14 +172,8 @@ textarea {
 
 /* ---------- cards & surfaces ---------- */
 
-/* A whisper of mown-fairway texture sits on top of the card surface — kept
-   faint enough (5% stroke opacity) that it reads as paper grain, not
-   something competing with the score numbers printed on it. */
 .card {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg fill='none' stroke='%231f5c40' stroke-width='1' stroke-linecap='round' opacity='0.05'%3E%3Cpath d='M5 34 Q6 24 4 16'/%3E%3Cpath d='M14 34 Q16 23 13 15'/%3E%3Cpath d='M23 34 Q24 24 22 16'/%3E%3Cpath d='M30 34 Q31 23 29 15'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
-  background-size: 34px 34px, auto;
+  background: linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 16px;
@@ -195,10 +181,7 @@ textarea {
 }
 
 .card-flush {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='34' height='34'%3E%3Cg fill='none' stroke='%231f5c40' stroke-width='1' stroke-linecap='round' opacity='0.05'%3E%3Cpath d='M5 34 Q6 24 4 16'/%3E%3Cpath d='M14 34 Q16 23 13 15'/%3E%3Cpath d='M23 34 Q24 24 22 16'/%3E%3Cpath d='M30 34 Q31 23 29 15'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
-  background-size: 34px 34px, auto;
+  background: linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -307,9 +290,9 @@ textarea {
 }
 
 .segmented button.active {
-  background: linear-gradient(135deg, var(--brass-light), var(--brass-dark));
-  color: var(--ink);
-  box-shadow: 0 6px 14px -6px rgba(201, 162, 39, 0.6);
+  background: linear-gradient(135deg, var(--forest-light), var(--forest));
+  color: var(--cream);
+  box-shadow: 0 6px 14px -6px rgba(20, 60, 40, 0.45);
 }
 
 .segmented button:active {
@@ -372,30 +355,14 @@ textarea {
   box-shadow: 0 0 0 1px rgba(156, 95, 46, 0.4), 0 4px 10px -3px rgba(156, 95, 46, 0.6);
 }
 
-/* ---------- clubhouse banner (fairway texture, CSS/SVG-generated) ---------- */
+/* ---------- clubhouse banner (deep fairway green, flat) ---------- */
 
 .fairway {
   position: relative;
   overflow: hidden;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30'%3E%3Cg fill='none' stroke='%23e8ca6e' stroke-width='1' stroke-linecap='round' opacity='0.14'%3E%3Cpath d='M5 30 Q6 21 4 14'/%3E%3Cpath d='M13 30 Q15 20 12 13'/%3E%3Cpath d='M21 30 Q22 21 20 14'/%3E%3Cpath d='M27 30 Q28 20 26 13'/%3E%3C/g%3E%3C/svg%3E"),
-    repeating-linear-gradient(
-      124deg,
-      rgba(255, 255, 255, 0.045) 0px,
-      rgba(255, 255, 255, 0.045) 3px,
-      transparent 3px,
-      transparent 17px
-    ),
-    repeating-linear-gradient(
-      124deg,
-      rgba(0, 0, 0, 0.14) 0px,
-      rgba(0, 0, 0, 0.14) 17px,
-      transparent 17px,
-      transparent 34px
-    ),
-    radial-gradient(circle at 50% -30%, rgba(216, 176, 60, 0.32), transparent 58%),
+  background:
+    radial-gradient(circle at 50% -30%, rgba(216, 176, 60, 0.2), transparent 58%),
     linear-gradient(165deg, #1f4d38 0%, #163a29 62%, #102a1d 100%);
-  background-size: 30px 30px, auto, auto, auto, auto;
 }
 
 .fairway::after {
@@ -419,20 +386,10 @@ textarea {
   justify-content: space-between;
   gap: 10px;
   padding: 12px 14px;
-  margin: 0 0 3px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md) var(--radius-md) 4px 4px;
-  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* A jagged mown-grass-tip silhouette under the top bar — a small, purely
-   decorative touch that shows up on every screen so the "standing on the
-   green" feel isn't limited to just the fairway banners. */
-.grass-edge {
-  display: block;
-  width: 100%;
-  height: 8px;
   margin: 0 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .top-bar > * {
@@ -651,9 +608,9 @@ textarea {
 }
 
 .pick-card.selected {
-  border-color: var(--brass);
-  background: linear-gradient(160deg, rgba(201, 162, 39, 0.14) 0%, var(--surface-alt) 100%);
-  box-shadow: var(--shadow-card), 0 0 0 1px rgba(201, 162, 39, 0.35);
+  border-color: var(--forest);
+  background: linear-gradient(160deg, rgba(31, 92, 64, 0.1) 0%, var(--surface-alt) 100%);
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(31, 92, 64, 0.3);
 }
 
 .pick-card.disabled {
@@ -671,8 +628,8 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--brass-light), var(--brass-dark));
-  color: var(--ink);
+  background: linear-gradient(135deg, var(--forest-light), var(--forest));
+  color: var(--cream);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
@@ -687,10 +644,10 @@ textarea {
 .sc-grid-header {
   display: grid;
   align-items: center;
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
   padding: 11px 10px;
   gap: 4px;
-  background: linear-gradient(180deg, rgba(31, 92, 64, 0.1), rgba(201, 162, 39, 0.06) 60%, transparent);
+  background: var(--surface-hi);
 }
 
 .sc-grid-row {
@@ -1023,8 +980,8 @@ textarea {
   align-items: center;
   padding: 9px 14px;
   gap: 6px;
-  border-bottom: 1px solid var(--border-strong);
-  background: linear-gradient(180deg, rgba(31, 92, 64, 0.1), rgba(171, 124, 30, 0.06) 60%, transparent);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-hi);
 }
 
 .hole-row {
@@ -1241,8 +1198,8 @@ textarea {
 }
 
 .chip.selected {
-  background: linear-gradient(135deg, var(--brass-light), var(--brass-dark));
-  color: var(--ink);
+  background: linear-gradient(135deg, var(--forest-light), var(--forest));
+  color: var(--cream);
   border-color: transparent;
 }
 
