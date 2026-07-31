@@ -1,9 +1,28 @@
 import { useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
-import { Crest } from '../components/icons'
+import { Crest, DoglegRightIcon, MapIcon, SplitFairwayIcon, StraightHoleIcon, WaterHazardIcon } from '../components/icons'
 
 const FRONT_NINE = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 const BACK_NINE = [10, 11, 12, 13, 14, 15, 16, 17, 18]
+
+// Real, publicly-known Zebula Elephant course notes — paraphrased, not
+// copied from any source. Matches the loaded hole data (par/SI) for these
+// holes, which is how we know it's genuinely this course. Every other hole
+// intentionally has no entry here rather than an invented one — see
+// StraightHoleIcon default below.
+const HOLE_NOTES = {
+  1: { icon: 'dogleg-right', note: 'Dogleg right around a stand of trees off the tee.' },
+  8: { icon: 'water', note: 'Raised green guarded by both water and a bunker.' },
+  15: { icon: 'split', note: 'Split fairway — pick your line off the tee.' },
+  18: { icon: 'water', note: 'Risk-reward par 5 — a pond guards a green reachable in two.' },
+}
+
+function HoleShapeIcon({ type, ...rest }) {
+  if (type === 'dogleg-right') return <DoglegRightIcon {...rest} />
+  if (type === 'split') return <SplitFairwayIcon {...rest} />
+  if (type === 'water') return <WaterHazardIcon {...rest} />
+  return <StraightHoleIcon {...rest} />
+}
 
 function sumBy(holes, key) {
   return holes.reduce((total, h) => total + (h[key] ?? 0), 0)
@@ -75,6 +94,11 @@ export default function Course() {
         </div>
       ) : (
         <>
+          <div className="hole-notes-caption">
+            <MapIcon width={12} height={12} />
+            General hole guidance from public course info — not a precise yardage map.
+          </div>
+
           <div className="card-flush" style={{ marginBottom: 14 }}>
             <NineHeading label="Front Nine" range="Holes 1–9" />
             <TableHead />
@@ -135,29 +159,47 @@ function TableHead() {
 
 function HoleRow({ hole: h, maxMetres }) {
   const fillPct = h.metres != null ? Math.max(8, Math.round((h.metres / maxMetres) * 100)) : 0
+  const note = HOLE_NOTES[h.hole]
   return (
-    <div className="hole-row">
-      <div className="hole-badge" style={badgeStyle(h.par)}>
-        {h.hole}
-      </div>
-      <span className="num-display" style={{ fontSize: 17 }}>
-        {h.par}
-      </span>
-      <span style={{ display: 'flex', justifyContent: 'center' }}>
-        <span className="si-chip" style={siStyle(h.stroke_index)}>
-          {h.stroke_index}
-        </span>
-      </span>
-      <div className="dist-cell">
-        <span className="num-display" style={{ fontSize: 14 }}>
-          {h.metres != null ? `${h.metres} m` : '–'}
-        </span>
-        {h.metres != null && (
-          <div className="dist-track">
-            <div className="dist-fill" style={{ width: `${fillPct}%` }} />
+    <div className="hole-row-wrap">
+      <div className="hole-row">
+        <div className="hole-shape-cell">
+          <div className="hole-badge" style={badgeStyle(h.par)}>
+            {h.hole}
           </div>
-        )}
+          <HoleShapeIcon
+            type={note?.icon}
+            width={12}
+            height={12}
+            strokeWidth={1.6}
+            style={{ color: note ? 'var(--brass-ink)' : 'var(--text-faint)', flexShrink: 0 }}
+          />
+        </div>
+        <span className="num-display" style={{ fontSize: 17 }}>
+          {h.par}
+        </span>
+        <span style={{ display: 'flex', justifyContent: 'center' }}>
+          <span className="si-chip" style={siStyle(h.stroke_index)}>
+            {h.stroke_index}
+          </span>
+        </span>
+        <div className="dist-cell">
+          <span className="num-display" style={{ fontSize: 14 }}>
+            {h.metres != null ? `${h.metres} m` : '–'}
+          </span>
+          {h.metres != null && (
+            <div className="dist-track">
+              <div className="dist-fill" style={{ width: `${fillPct}%` }} />
+            </div>
+          )}
+        </div>
       </div>
+      {note && (
+        <div className="hole-note-strip">
+          <HoleShapeIcon type={note.icon} width={13} height={13} strokeWidth={1.6} style={{ color: 'var(--brass-ink)', flexShrink: 0, marginTop: 1 }} />
+          <span>{note.note}</span>
+        </div>
+      )}
     </div>
   )
 }

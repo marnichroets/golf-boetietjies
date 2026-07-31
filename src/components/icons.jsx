@@ -173,6 +173,63 @@ export function LockIcon(props) {
   )
 }
 
+// Dimpled golf-ball motif — used sparingly as a decorative flourish (section
+// dividers, the leaderboard leader's badge), never as a generic bullet.
+export function GolfBallIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <circle cx="12" cy="12" r="8" />
+      {[
+        [9, 9], [12, 8], [15, 9],
+        [9, 12], [12, 12], [15, 12],
+        [9, 15], [12, 16], [15, 15],
+      ].map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="0.65" fill="currentColor" stroke="none" />
+      ))}
+    </svg>
+  )
+}
+
+// ---------- hole-shape indicators (Course tab) ----------
+
+export function StraightHoleIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M12 20V5" />
+      <path d="M8.5 8.5 12 5 15.5 8.5" />
+    </svg>
+  )
+}
+
+export function DoglegRightIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M6 20V11a5 5 0 0 1 5-5h6" />
+      <path d="M13.5 3 18 6l-4.5 3" />
+    </svg>
+  )
+}
+
+export function SplitFairwayIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M12 21v-8" />
+      <path d="M12 13 6 4" />
+      <path d="M12 13l6-9" />
+    </svg>
+  )
+}
+
+export function WaterHazardIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M3 8.5c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 3 1.4 4.5 0" />
+      <path d="M3 13.5c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 3 1.4 4.5 0" />
+      <path d="M3 18.5c1.5-1.4 3-1.4 4.5 0s3 1.4 4.5 0 3-1.4 4.5 0 3 1.4 4.5 0" />
+    </svg>
+  )
+}
+
 export function Crest({ size = 22, ...rest }) {
   return (
     <svg

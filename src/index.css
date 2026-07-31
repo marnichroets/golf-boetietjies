@@ -65,8 +65,11 @@ body {
 
 body {
   margin: 0;
+  /* A soft green spotlight glow pooling under the header, like a fairway
+     lit from above — depth without a repeating pattern. */
   background:
-    radial-gradient(circle at 18% -8%, rgba(171, 124, 30, 0.1), transparent 42%),
+    radial-gradient(ellipse 900px 460px at 50% -6%, rgba(31, 92, 64, 0.2), transparent 62%),
+    radial-gradient(circle at 18% -8%, rgba(171, 124, 30, 0.12), transparent 42%),
     radial-gradient(circle at 100% 0%, rgba(31, 92, 64, 0.14), transparent 44%),
     radial-gradient(ellipse at top, var(--bg-1) 0%, var(--bg-0) 68%);
   background-attachment: fixed;
@@ -163,11 +166,27 @@ textarea {
   letter-spacing: -0.01em;
 }
 
-.gold-rule {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--border-strong) 18%, var(--border-strong) 82%, transparent);
-  border: none;
+/* A clubhouse-scorecard flourish: line — ball — line. The one deliberate
+   spot the golf-ball motif appears as a divider; not reused as a generic
+   bullet elsewhere. */
+.ball-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 14px 0;
+  color: var(--brass);
+}
+
+.ball-divider::before,
+.ball-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-strong));
+}
+
+.ball-divider::after {
+  background: linear-gradient(90deg, var(--border-strong), transparent);
 }
 
 /* ---------- cards & surfaces ---------- */
@@ -355,14 +374,44 @@ textarea {
   box-shadow: 0 0 0 1px rgba(156, 95, 46, 0.4), 0 4px 10px -3px rgba(156, 95, 46, 0.6);
 }
 
-/* ---------- clubhouse banner (deep fairway green, flat) ---------- */
+/* Golf-ball pin on the leaderboard leader's avatar only — the second (and
+   last) deliberate spot the ball motif appears in the app. */
+.leader-ball-pin {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, var(--gold-medal-a), var(--gold-medal-b));
+  color: #6b4e0f;
+  box-shadow: 0 0 0 2px var(--surface), 0 2px 5px rgba(0, 0, 0, 0.35);
+}
 
+/* ---------- clubhouse banner (mown-fairway texture) ---------- */
+
+/* Mower stripes (alternating light/dark bands, the real broadcast-golf
+   tell) plus a fine grass-blade grain — richer and more legible as an
+   actual fairway than the previous flat green. Kept off cards entirely;
+   this only ever sits behind cream/white banner text, so contrast holds. */
 .fairway {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% -30%, rgba(216, 176, 60, 0.2), transparent 58%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cg fill='none' stroke='%23e8ca6e' stroke-width='1' stroke-linecap='round' opacity='0.16'%3E%3Cpath d='M4 26 Q5 18 3 12'/%3E%3Cpath d='M11 26 Q13 17 10 11'/%3E%3Cpath d='M18 26 Q19 18 17 12'/%3E%3Cpath d='M23 26 Q24 17 22 11'/%3E%3C/g%3E%3C/svg%3E"),
+    repeating-linear-gradient(
+      112deg,
+      rgba(255, 255, 255, 0.07) 0px,
+      rgba(255, 255, 255, 0.07) 22px,
+      rgba(0, 0, 0, 0.1) 22px,
+      rgba(0, 0, 0, 0.1) 44px
+    ),
+    radial-gradient(circle at 50% -30%, rgba(216, 176, 60, 0.24), transparent 58%),
     linear-gradient(165deg, #1f4d38 0%, #163a29 62%, #102a1d 100%);
+  background-size: 26px 26px, auto, auto, auto;
 }
 
 .fairway::after {
@@ -976,7 +1025,7 @@ textarea {
 
 .hole-table-head {
   display: grid;
-  grid-template-columns: 46px 1fr 0.85fr 1.4fr;
+  grid-template-columns: 60px 1fr 0.8fr 1.3fr;
   align-items: center;
   padding: 9px 14px;
   gap: 6px;
@@ -984,17 +1033,27 @@ textarea {
   background: var(--surface-hi);
 }
 
+.hole-row-wrap:nth-child(even) {
+  background: rgba(20, 40, 30, 0.028);
+}
+
 .hole-row {
   display: grid;
-  grid-template-columns: 46px 1fr 0.85fr 1.4fr;
+  grid-template-columns: 60px 1fr 0.8fr 1.3fr;
   align-items: center;
   padding: 8px 14px;
   gap: 6px;
   border-bottom: 1px solid var(--border-soft);
 }
 
-.hole-row:nth-child(even) {
-  background: rgba(20, 40, 30, 0.028);
+.hole-row-wrap:last-child .hole-row {
+  border-bottom: none;
+}
+
+.hole-shape-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .hole-badge {
@@ -1011,6 +1070,33 @@ textarea {
   font-size: 14px;
   color: var(--forest-dark);
   flex-shrink: 0;
+}
+
+/* One-line note only on the handful of holes with real course info — see
+   HOLE_NOTES in Course.jsx. Everything else stays unlabelled rather than
+   inventing hazard detail the app doesn't actually have. */
+.hole-note-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 0 14px 10px 14px;
+  font-size: 11.5px;
+  font-style: italic;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.hole-row-wrap:last-child .hole-note-strip {
+  border-bottom: none;
+}
+
+.hole-notes-caption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin: -8px 0 14px 2px;
 }
 
 .si-chip {
@@ -1049,7 +1135,7 @@ textarea {
 
 .course-sum-row {
   display: grid;
-  grid-template-columns: 46px 1fr 0.85fr 1.4fr;
+  grid-template-columns: 60px 1fr 0.8fr 1.3fr;
   align-items: center;
   padding: 11px 14px;
   gap: 6px;

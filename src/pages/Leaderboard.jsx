@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { roundSummary } from '../utils/stableford'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
+import { GolfBallIcon } from '../components/icons'
 
 const VIEWS = [
   { key: 'combined', label: 'Combined' },
@@ -62,19 +63,26 @@ export default function Leaderboard() {
               <div className={`rank-badge ${rankClass}`} style={rankClass ? undefined : { background: 'var(--surface-hi)' }}>
                 {idx + 1}
               </div>
-              <span
-                className="avatar"
-                style={{
-                  width: 40,
-                  height: 40,
-                  fontSize: 18,
-                  background: row.player.photo_url ? 'transparent' : playerColor(row.player),
-                  boxShadow: isLeader
-                    ? '0 0 0 2px var(--brass), 0 3px 8px -3px rgba(0,0,0,0.5)'
-                    : 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 3px 8px -3px rgba(0,0,0,0.5)',
-                }}
-              >
-                {row.player.photo_url ? <img src={row.player.photo_url} alt="" /> : playerEmoji(row.player)}
+              <span style={{ position: 'relative', flexShrink: 0 }}>
+                <span
+                  className="avatar"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    fontSize: 18,
+                    background: row.player.photo_url ? 'transparent' : playerColor(row.player),
+                    boxShadow: isLeader
+                      ? '0 0 0 2px var(--brass), 0 3px 8px -3px rgba(0,0,0,0.5)'
+                      : 'inset 0 0 0 1px rgba(255,255,255,0.12), 0 3px 8px -3px rgba(0,0,0,0.5)',
+                  }}
+                >
+                  {row.player.photo_url ? <img src={row.player.photo_url} alt="" /> : playerEmoji(row.player)}
+                </span>
+                {isLeader && (
+                  <span className="leader-ball-pin">
+                    <GolfBallIcon width={10} height={10} strokeWidth={1.4} />
+                  </span>
+                )}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

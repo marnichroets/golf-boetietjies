@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { computeStats } from '../utils/stats'
-import { FlameIcon, SnowflakeIcon, TargetIcon } from '../components/icons'
+import { FlameIcon, GolfBallIcon, SnowflakeIcon, TargetIcon } from '../components/icons'
 
 export default function Stats() {
   const { players, scores, courseHoles } = useGolfData()
@@ -54,7 +54,9 @@ export default function Stats() {
         )}
       </div>
 
-      <hr className="gold-rule" />
+      <div className="ball-divider">
+        <GolfBallIcon width={15} height={15} strokeWidth={1.4} />
+      </div>
 
       <div className="card">
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
