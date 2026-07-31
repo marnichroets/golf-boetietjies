@@ -164,6 +164,15 @@ export function StarIcon(props) {
   )
 }
 
+export function LockIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7.5a4 4 0 0 1 8 0V11" />
+    </svg>
+  )
+}
+
 export function Crest({ size = 22, ...rest }) {
   return (
     <svg

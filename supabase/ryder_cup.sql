@@ -29,12 +29,11 @@ create table if not exists teams (
   created_at timestamptz not null default now()
 );
 
--- Seed exactly two teams the first time this runs, defaulting to the
--- existing forest-green / brass-gold theme colours. Re-running this
--- script won't add more once any teams row exists.
+-- Seed exactly two teams the first time this runs, Ryder Cup red vs.
+-- blue. Re-running this script won't add more once any teams row exists.
 insert into teams (name, color)
 select v.name, v.color
-from (values ('Forest', '#1f5c40'), ('Brass', '#ab7c1e')) as v(name, color)
+from (values ('Red', '#c1272d'), ('Blue', '#1f5fa8')) as v(name, color)
 where not exists (select 1 from teams);
 
 -- ---------- players: team assignment + captain flag ----------

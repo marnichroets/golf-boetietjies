@@ -5,7 +5,7 @@ import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import PlayerEditSheet from '../components/PlayerEditSheet'
 import { PencilIcon, StarIcon } from '../components/icons'
 
-const TEAM_COLOR_PRESETS = ['#1f5c40', '#ab7c1e', '#3f6fa8', '#8a3a4c', '#5c6b4f', '#4a5d7a']
+const TEAM_COLOR_PRESETS = ['#c1272d', '#1f5fa8', '#1f5c40', '#ab7c1e', '#8a3a4c', '#4a5d7a']
 
 export default function Players() {
   const { players, teams, ryderCupEnabled, setRyderCupEnabled, updateTeam, updatePlayer } = useGolfData()

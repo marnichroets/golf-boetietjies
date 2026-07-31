@@ -4,9 +4,16 @@ import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { useFourball, MAX_GROUP } from '../hooks/useFourball'
 import { roundSummary, formatRelativePar } from '../utils/stableford'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
-import { CheckIcon, UsersIcon } from '../components/icons'
+import { CheckIcon, LockIcon, UsersIcon } from '../components/icons'
 
 const NUMPAD_VALUES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+// Canonical, order-independent identity for a fourball — any device that
+// independently picks the same set of players lands on the same scorer
+// lock row, regardless of the order they tapped them in.
+function groupKeyOf(ids) {
+  return [...ids].sort().join(',')
+}
 
 function shortLabel(name) {
   const parts = name.trim().split(/\s+/)
@@ -59,13 +66,16 @@ function cellColor(strokes, par) {
 }
 
 export default function Scorecard() {
-  const { players, courseHoles, scores, upsertScore, clearScore, isPending } = useGolfData()
+  const { players, courseHoles, scores, upsertScore, clearScore, isPending, scorerLocks, setScorerLock } = useGolfData()
   const { playerId: myId } = useLocalPlayer()
   const { groupIds, setGroupIds, toggleMember } = useFourball()
   const [round, setRound] = useState(1)
   const [nine, setNine] = useState('front')
   const [activeCell, setActiveCell] = useState(null)
   const [editingGroup, setEditingGroup] = useState(groupIds.length === 0)
+  const [choosingScorer, setChoosingScorer] = useState(false)
+  const [changingScorer, setChangingScorer] = useState(false)
+  const [skippedLockKey, setSkippedLockKey] = useState(null)
 
   // Pre-select "you" as a convenience starting point the very first time the
   // picker shows up empty — the group is still fully editable from there.
@@ -87,6 +97,42 @@ export default function Scorecard() {
 
   const groupPlayers = groupIds.map((id) => players.find((p) => p.id === id)).filter(Boolean)
   const labels = useMemo(() => buildLabels(groupPlayers, myId), [groupPlayers, myId])
+
+  const groupKey = useMemo(() => groupKeyOf(groupIds), [groupIds])
+  const lockKey = `${round}:${groupKey}`
+  // Absent entirely (no row for this round+group) means "nobody has chosen
+  // a scorer yet" — distinct from a row that names a scorer. A database
+  // that hasn't run supabase/scorer_lock.sql just never has any rows here,
+  // so scoring quietly stays open for everyone, same as before this
+  // feature existed.
+  const activeLock = scorerLocks.find((l) => l.round === round && l.group_key === groupKey)
+  const scorerPlayer = activeLock ? players.find((p) => p.id === activeLock.scorer_player_id) : null
+  const isScorer = !activeLock || activeLock.scorer_player_id === myId
+
+  // Prompts once per (round, group) whenever it turns out nobody has
+  // claimed the scorer slot yet — right after a group is (re)confirmed,
+  // or after switching to a round that this same group hasn't locked in.
+  // Skipping (see dismissScorerSheet) is remembered per lockKey so it
+  // doesn't nag again for the rest of this session.
+  useEffect(() => {
+    if (editingGroup) return
+    if (groupPlayers.length === 0) return
+    if (activeLock) return
+    if (skippedLockKey === lockKey) return
+    setChoosingScorer(true)
+  }, [editingGroup, lockKey, activeLock, groupPlayers.length, skippedLockKey])
+
+  const chooseScorer = (playerId) => {
+    setScorerLock(round, groupKey, playerId)
+    setChoosingScorer(false)
+    setChangingScorer(false)
+  }
+
+  const dismissScorerSheet = () => {
+    if (choosingScorer) setSkippedLockKey(lockKey)
+    setChoosingScorer(false)
+    setChangingScorer(false)
+  }
 
   useEffect(() => {
     const stillValid =
@@ -166,6 +212,24 @@ export default function Scorecard() {
 
       <GroupBar groupPlayers={groupPlayers} labels={labels} onChange={() => setEditingGroup(true)} />
 
+      <ScorerBar
+        scorerPlayer={scorerPlayer}
+        labels={labels}
+        isScorer={isScorer}
+        onChange={() => setChangingScorer(true)}
+      />
+
+      {(choosingScorer || changingScorer) && (
+        <ScorerSheet
+          groupPlayers={groupPlayers}
+          labels={labels}
+          currentScorerId={activeLock?.scorer_player_id ?? null}
+          cancelLabel={choosingScorer ? 'Skip for now' : 'Cancel'}
+          onChoose={chooseScorer}
+          onCancel={dismissScorerSheet}
+        />
+      )}
+
       <div className="segmented" style={{ marginBottom: 14 }}>
         <button className={nine === 'front' ? 'active' : ''} onClick={() => setNine('front')}>
           Front 9
@@ -197,12 +261,13 @@ export default function Scorecard() {
                 <button
                   key={p.id}
                   className="sc-cell"
-                  onClick={() => setActiveCell({ playerId: p.id, hole: h.hole })}
+                  onClick={isScorer ? () => setActiveCell({ playerId: p.id, hole: h.hole }) : undefined}
                   style={{
-                    border: isActive ? '1.5px solid var(--brass)' : '1px solid var(--border)',
-                    background: isActive ? 'rgba(201,162,39,0.16)' : 'var(--surface-hi)',
+                    border: isActive && isScorer ? '1.5px solid var(--brass)' : '1px solid var(--border)',
+                    background: isActive && isScorer ? 'rgba(201,162,39,0.16)' : 'var(--surface-hi)',
                     color: cellColor(strokes, h.par),
                     fontSize: strokes === 0 ? 12 : undefined,
+                    cursor: isScorer ? 'pointer' : 'default',
                   }}
                 >
                   {cellLabel(strokes)}
@@ -213,17 +278,21 @@ export default function Scorecard() {
         ))}
       </div>
 
-      <NumberPad
-        activeCell={activeCell}
-        activeHoleInfo={activeHoleInfo}
-        activePlayer={activePlayer}
-        activeStrokes={activeStrokes}
-        labels={labels}
-        pendingKey={pendingKey}
-        isPending={isPending}
-        setActiveStrokes={setActiveStrokes}
-        clearActiveStrokes={clearActiveStrokes}
-      />
+      {isScorer ? (
+        <NumberPad
+          activeCell={activeCell}
+          activeHoleInfo={activeHoleInfo}
+          activePlayer={activePlayer}
+          activeStrokes={activeStrokes}
+          labels={labels}
+          pendingKey={pendingKey}
+          isPending={isPending}
+          setActiveStrokes={setActiveStrokes}
+          clearActiveStrokes={clearActiveStrokes}
+        />
+      ) : (
+        <LockedBanner scorerLabel={labels[scorerPlayer?.id]} onChangeScorer={() => setChangingScorer(true)} />
+      )}
 
       <ScorecardTotals
         round={round}
@@ -333,6 +402,142 @@ function GroupBar({ groupPlayers, labels, onChange }) {
         onClick={onChange}
       >
         Change
+      </button>
+    </div>
+  )
+}
+
+// Only rendered once a scorer has actually been locked in for this
+// (round, group) — a database without supabase/scorer_lock.sql run yet, or
+// a group that skipped choosing, has no lock row at all, and scoring just
+// stays open for everyone with no bar shown.
+function ScorerBar({ scorerPlayer, labels, isScorer, onChange }) {
+  if (!scorerPlayer) return null
+  return (
+    <div
+      className="card"
+      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', marginBottom: 14, fontSize: 12.5 }}
+    >
+      <LockIcon width={15} height={15} style={{ color: 'var(--brass)', flexShrink: 0 }} />
+      <span style={{ flex: 1, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <strong style={{ color: 'var(--text)' }}>{labels[scorerPlayer.id]}</strong> is scoring this group
+        {isScorer ? ' (you)' : ''}
+      </span>
+      <button
+        className="pill pill-brass"
+        style={{ cursor: 'pointer', border: 'none', flexShrink: 0, padding: '9px 14px', fontSize: 11.5, minHeight: 34 }}
+        onClick={onChange}
+      >
+        Change scorer
+      </button>
+    </div>
+  )
+}
+
+// Reused both for the initial "who's keeping score" prompt (right after a
+// group is confirmed, or on switching to a round this group hasn't locked
+// in) and for the explicit "Change scorer" flow — picking a player is the
+// confirmation, so there's no separate "are you sure" step to fumble
+// through mid-round.
+function ScorerSheet({ groupPlayers, labels, currentScorerId, cancelLabel, onChoose, onCancel }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(4, 8, 5, 0.68)',
+        backdropFilter: 'blur(2px)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        zIndex: 100,
+      }}
+      onClick={onCancel}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 560,
+          margin: '0 auto',
+          background: 'linear-gradient(160deg, var(--surface) 0%, var(--surface-alt) 100%)',
+          border: '1px solid var(--border)',
+          borderBottom: 'none',
+          borderTopLeftRadius: 'var(--radius-lg)',
+          borderTopRightRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-pop)',
+          padding: '18px 18px calc(22px + var(--safe-bottom))',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)', margin: '0 auto 16px' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <LockIcon width={15} height={15} style={{ color: 'var(--brass)' }} />
+          <span className="eyebrow">Scorer lock</span>
+        </div>
+        <h2 className="page-title" style={{ fontSize: 19, margin: '6px 0 4px' }}>
+          Who's keeping score for this four?
+        </h2>
+        <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '0 0 16px' }}>
+          Only their device will be able to enter scores for this group this round — everyone else sees it live,
+          read-only.
+        </p>
+
+        <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
+          {groupPlayers.map((p) => (
+            <button
+              key={p.id}
+              className="card"
+              style={{
+                appearance: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                width: '100%',
+                textAlign: 'left',
+                padding: '11px 14px',
+                cursor: 'pointer',
+                border: p.id === currentScorerId ? '1.5px solid var(--brass)' : '1px solid var(--border)',
+                background:
+                  p.id === currentScorerId
+                    ? 'linear-gradient(160deg, rgba(201,162,39,0.14) 0%, var(--surface-alt) 100%)'
+                    : undefined,
+              }}
+              onClick={() => onChoose(p.id)}
+            >
+              <span
+                className="avatar"
+                style={{ width: 38, height: 38, fontSize: 16, background: p.photo_url ? 'transparent' : playerColor(p) }}
+              >
+                {p.photo_url ? <img src={p.photo_url} alt="" /> : playerEmoji(p)}
+              </span>
+              <span style={{ flex: 1, fontWeight: 700 }}>{labels[p.id]}</span>
+              {p.id === currentScorerId && (
+                <span className="pill pill-brass" style={{ fontSize: 10.5, padding: '4px 9px' }}>
+                  Current
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <button className="btn" style={{ width: '100%' }} onClick={onCancel}>
+          {cancelLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function LockedBanner({ scorerLabel, onChangeScorer }) {
+  return (
+    <div className="card-flush numpad-panel" style={{ marginBottom: 16, padding: 18, textAlign: 'center' }}>
+      <LockIcon width={20} height={20} style={{ color: 'var(--brass)', marginBottom: 8 }} />
+      <div style={{ fontSize: 13.5, color: 'var(--text-dim)', marginBottom: 12 }}>
+        <strong style={{ color: 'var(--text)' }}>{scorerLabel}</strong> is scoring this group — you're viewing live,
+        read-only.
+      </div>
+      <button className="btn" onClick={onChangeScorer}>
+        Change scorer
       </button>
     </div>
   )

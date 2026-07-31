@@ -41,6 +41,11 @@ export function GolfDataProvider({ children }) {
   const [ryderCupEnabled, setRyderCupEnabledState] = useState(false)
   const [teams, setTeams] = useState([])
   const [pairings, setPairings] = useState([])
+  // One row per (round, group_key) fourball — see supabase/scorer_lock.sql.
+  // Optional like the Ryder Cup tables: a database that hasn't run that
+  // migration yet just gets an empty list back, and every group scores
+  // open/unlocked exactly like before this feature existed.
+  const [scorerLocks, setScorerLocks] = useState([])
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(true)
   const pendingRef = useRef(new Set())
@@ -50,7 +55,7 @@ export function GolfDataProvider({ children }) {
     let cancelled = false
 
     async function load() {
-      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes] = await Promise.all([
+      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes, scorerLocksRes] = await Promise.all([
         supabase
           .from('players')
           .select('*')
@@ -59,12 +64,13 @@ export function GolfDataProvider({ children }) {
         supabase.from('course_holes').select('*'),
         supabase.from('scores').select('*'),
         supabase.from('claims').select('*'),
-        // These three tables (supabase/ryder_cup.sql) are optional — on a
-        // database that hasn't run that migration yet, these queries just
-        // error out and the Ryder Cup layer quietly stays off/empty.
+        // These four tables (supabase/ryder_cup.sql, supabase/scorer_lock.sql)
+        // are optional — on a database that hasn't run those migrations yet,
+        // these queries just error out and the features quietly stay off/empty.
         supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
         supabase.from('teams').select('*').order('created_at', { ascending: true }),
         supabase.from('pairings').select('*'),
+        supabase.from('scorer_locks').select('*'),
       ])
       if (cancelled) return
       if (playersRes.data) setPlayers(playersRes.data)
@@ -74,6 +80,7 @@ export function GolfDataProvider({ children }) {
       if (settingsRes.data) setRyderCupEnabledState(!!settingsRes.data.ryder_cup_enabled)
       if (teamsRes.data) setTeams(teamsRes.data)
       if (pairingsRes.data) setPairings(pairingsRes.data)
+      if (scorerLocksRes.data) setScorerLocks(scorerLocksRes.data)
       setLoading(false)
     }
 
@@ -122,6 +129,21 @@ export function GolfDataProvider({ children }) {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pairings' }, (payload) => {
         setPairings((prev) => applyRowChange(prev, payload))
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scorer_locks' }, (payload) => {
+        // Matched by (round, group_key) rather than id — the optimistic
+        // insert in setScorerLock uses a placeholder id, so an id-only
+        // merge would leave that placeholder behind as a duplicate once
+        // the real row arrives over the wire.
+        setScorerLocks((prev) => {
+          if (payload.eventType === 'DELETE') {
+            const row = payload.old
+            return prev.filter((l) => !(l.round === row.round && l.group_key === row.group_key))
+          }
+          const row = payload.new
+          const filtered = prev.filter((l) => !(l.round === row.round && l.group_key === row.group_key))
+          return [...filtered, row]
+        })
       })
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED')
@@ -271,6 +293,32 @@ export function GolfDataProvider({ children }) {
       })
   }, [])
 
+  // One row per (round, group_key) fourball — upserting always overwrites
+  // whichever player was previously the locked scorer, which is exactly
+  // how "change scorer" works: it's just choosing again.
+  const setScorerLock = useCallback((round, groupKey, scorerPlayerId) => {
+    setScorerLocks((prev) => {
+      const exists = prev.some((l) => l.round === round && l.group_key === groupKey)
+      if (exists) {
+        return prev.map((l) =>
+          l.round === round && l.group_key === groupKey
+            ? { ...l, scorer_player_id: scorerPlayerId, updated_at: new Date().toISOString() }
+            : l,
+        )
+      }
+      return [...prev, { id: `optimistic-${round}-${groupKey}`, round, group_key: groupKey, scorer_player_id: scorerPlayerId, updated_at: new Date().toISOString() }]
+    })
+    supabase
+      .from('scorer_locks')
+      .upsert(
+        { round, group_key: groupKey, scorer_player_id: scorerPlayerId, updated_at: new Date().toISOString() },
+        { onConflict: 'round,group_key' },
+      )
+      .then(({ error }) => {
+        if (error) console.error('scorer lock sync failed', error)
+      })
+  }, [])
+
   const uploadPlayerPhoto = useCallback(async (playerId, file) => {
     const ext = file.name.split('.').pop()
     const path = `${playerId}-${Date.now()}.${ext}`
@@ -296,6 +344,7 @@ export function GolfDataProvider({ children }) {
       ryderCupEnabled,
       teams,
       pairings,
+      scorerLocks,
       upsertScore,
       clearScore,
       claimCategory,
@@ -305,9 +354,10 @@ export function GolfDataProvider({ children }) {
       setRyderCupEnabled,
       updateTeam,
       savePairing,
+      setScorerLock,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, pendingVersion],
+    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, scorerLocks, pendingVersion],
   )
 
   return <GolfDataContext.Provider value={value}>{children}</GolfDataContext.Provider>
