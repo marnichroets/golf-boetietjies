@@ -5,8 +5,6 @@ import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import PlayerEditSheet from '../components/PlayerEditSheet'
 import { PencilIcon, StarIcon } from '../components/icons'
 
-const TEAM_COLOR_PRESETS = ['#c1272d', '#1f5fa8', '#1f5c40', '#ab7c1e', '#8a3a4c', '#4a5d7a']
-
 export default function Players() {
   const { players, teams, ryderCupEnabled, setRyderCupEnabled, updateTeam, updatePlayer } = useGolfData()
   const { playerId } = useLocalPlayer()
@@ -186,28 +184,9 @@ function TeamEditor({ team, updateTeam }) {
           fontSize: 15,
           color: team.color,
           padding: 0,
-          marginBottom: 8,
+          marginBottom: 0,
         }}
       />
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {TEAM_COLOR_PRESETS.map((c) => (
-          <button
-            key={c}
-            aria-label={`Set ${team.name} colour`}
-            onClick={() => updateTeam(team.id, { color: c })}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: c,
-              border: team.color === c ? '2px solid var(--ink)' : '1px solid var(--border)',
-              cursor: 'pointer',
-              padding: 0,
-              flexShrink: 0,
-            }}
-          />
-        ))}
-      </div>
     </div>
   )
 }
