@@ -59,6 +59,11 @@ export function GolfDataProvider({ children }) {
   // migration yet just gets an empty list back, and every group scores
   // open/unlocked exactly like before this feature existed.
   const [scorerLocks, setScorerLocks] = useState([])
+  // Fines and wheel spins are optional like the tables above — a database
+  // that hasn't run supabase/fines_and_wheel.sql yet just gets empty lists
+  // back, and those two tabs quietly render with nothing logged.
+  const [fines, setFines] = useState([]) // newest first
+  const [wheelSpins, setWheelSpins] = useState([]) // newest first
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(true)
   const pendingRef = useRef(new Set())
@@ -75,23 +80,27 @@ export function GolfDataProvider({ children }) {
     let cancelled = false
 
     async function load() {
-      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes, scorerLocksRes] = await Promise.all([
-        supabase
-          .from('players')
-          .select('*')
-          .order('created_at', { ascending: true })
-          .order('id', { ascending: true }),
-        supabase.from('course_holes').select('*'),
-        supabase.from('scores').select('*'),
-        supabase.from('claims').select('*'),
-        // These four tables (supabase/ryder_cup.sql, supabase/scorer_lock.sql)
-        // are optional — on a database that hasn't run those migrations yet,
-        // these queries just error out and the features quietly stay off/empty.
-        supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
-        supabase.from('teams').select('*').order('created_at', { ascending: true }),
-        supabase.from('pairings').select('*'),
-        supabase.from('scorer_locks').select('*'),
-      ])
+      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes, scorerLocksRes, finesRes, wheelSpinsRes] =
+        await Promise.all([
+          supabase
+            .from('players')
+            .select('*')
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true }),
+          supabase.from('course_holes').select('*'),
+          supabase.from('scores').select('*'),
+          supabase.from('claims').select('*'),
+          // These six tables (supabase/ryder_cup.sql, supabase/scorer_lock.sql,
+          // supabase/fines_and_wheel.sql) are optional — on a database that
+          // hasn't run those migrations yet, these queries just error out and
+          // the features quietly stay off/empty.
+          supabase.from('app_settings').select('*').eq('id', 1).maybeSingle(),
+          supabase.from('teams').select('*').order('created_at', { ascending: true }),
+          supabase.from('pairings').select('*'),
+          supabase.from('scorer_locks').select('*'),
+          supabase.from('fines').select('*').order('created_at', { ascending: false }),
+          supabase.from('wheel_spins').select('*').order('created_at', { ascending: false }),
+        ])
       if (cancelled) return
       if (playersRes.data) setPlayers(playersRes.data)
       if (holesRes.data) setCourseHoles(groupHolesByRound(holesRes.data))
@@ -107,6 +116,8 @@ export function GolfDataProvider({ children }) {
       if (teamsRes.data) setTeams(teamsRes.data)
       if (pairingsRes.data) setPairings(pairingsRes.data)
       if (scorerLocksRes.data) setScorerLocks(scorerLocksRes.data)
+      if (finesRes.data) setFines(finesRes.data)
+      if (wheelSpinsRes.data) setWheelSpins(wheelSpinsRes.data)
       setLoading(false)
       flushScoreQueueRef.current()
     }
@@ -156,6 +167,15 @@ export function GolfDataProvider({ children }) {
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pairings' }, (payload) => {
         setPairings((prev) => applyRowChange(prev, payload))
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fines' }, (payload) => {
+        // Insert-only log — merge by id (idempotent) since the device that
+        // logged it already appended the exact same real row itself, from
+        // the insert's own response, and may beat this broadcast there.
+        setFines((prev) => (prev.some((f) => f.id === payload.new.id) ? prev : [payload.new, ...prev]))
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wheel_spins' }, (payload) => {
+        setWheelSpins((prev) => (prev.some((s) => s.id === payload.new.id) ? prev : [payload.new, ...prev]))
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'scorer_locks' }, (payload) => {
         // Matched by (round, group_key) rather than id — the optimistic
@@ -304,6 +324,46 @@ export function GolfDataProvider({ children }) {
     [markPending],
   )
 
+  // Both merge the freshly-inserted real row into local state directly
+  // (rather than an optimistic placeholder id) so the realtime INSERT
+  // handler's id-based dedupe above can never end up with two copies of
+  // the same log entry, regardless of which one lands first.
+  const logFine = useCallback((playerId, reason) => {
+    const key = `fine:${playerId}:${Date.now()}`
+    markPending(key, true)
+    supabase
+      .from('fines')
+      .insert({ player_id: playerId, reason })
+      .select()
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('fine log failed', error)
+        } else {
+          setFines((prev) => (prev.some((f) => f.id === data.id) ? prev : [data, ...prev]))
+        }
+        markPending(key, false)
+      })
+  }, [markPending])
+
+  const logWheelSpin = useCallback((playerId, club) => {
+    const key = `wheel-spin:${playerId}:${Date.now()}`
+    markPending(key, true)
+    supabase
+      .from('wheel_spins')
+      .insert({ player_id: playerId, club })
+      .select()
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('wheel spin log failed', error)
+        } else {
+          setWheelSpins((prev) => (prev.some((s) => s.id === data.id) ? prev : [data, ...prev]))
+        }
+        markPending(key, false)
+      })
+  }, [markPending])
+
   const updatePlayer = useCallback(
     (id, patch) => {
       const key = `player:${id}`
@@ -420,6 +480,8 @@ export function GolfDataProvider({ children }) {
       teams,
       pairings,
       scorerLocks,
+      fines,
+      wheelSpins,
       upsertScore,
       clearScore,
       claimCategory,
@@ -430,9 +492,11 @@ export function GolfDataProvider({ children }) {
       updateTeam,
       savePairing,
       setScorerLock,
+      logFine,
+      logWheelSpin,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, scorerLocks, pendingVersion],
+    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, scorerLocks, fines, wheelSpins, pendingVersion],
   )
 
   return <GolfDataContext.Provider value={value}>{children}</GolfDataContext.Provider>

@@ -1,12 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import { useGolfData } from '../context/GolfDataContext'
-import { ChartIcon, FlagIcon, MapIcon, ShieldIcon, TargetIcon, TrophyIcon, UsersIcon } from './icons'
+import { ChartIcon, FlagIcon, MapIcon, ShieldIcon, TargetIcon, TicketIcon, TrophyIcon, UsersIcon } from './icons'
 
 const TABS = [
   { to: '/leaderboard', Icon: TrophyIcon, label: 'Leaders' },
   { to: '/scorecard', Icon: FlagIcon, label: 'Score' },
   { to: '/course', Icon: MapIcon, label: 'Course' },
   { to: '/claims', Icon: TargetIcon, label: 'Claims' },
+  { to: '/fines', Icon: TicketIcon, label: 'Fines' },
   { to: '/stats', Icon: ChartIcon, label: 'Stats' },
   { to: '/players', Icon: UsersIcon, label: 'Players' },
 ]

@@ -9,6 +9,7 @@ import Scorecard from './pages/Scorecard'
 import Course from './pages/Course'
 import Leaderboard from './pages/Leaderboard'
 import Claims from './pages/Claims'
+import Fines from './pages/Fines'
 import Stats from './pages/Stats'
 import RyderCup from './pages/RyderCup'
 import { Crest } from './components/icons'
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/scorecard" element={<Scorecard />} />
           <Route path="/course" element={<Course />} />
           <Route path="/claims" element={<Claims />} />
+          <Route path="/fines" element={<Fines />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/players" element={<Players />} />
           <Route

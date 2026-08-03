@@ -230,6 +230,42 @@ export function WaterHazardIcon(props) {
   )
 }
 
+export function BookIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M4 5.5A2 2 0 0 1 6 4h5v16H6a2 2 0 0 1-2-2V5.5Z" />
+      <path d="M20 5.5A2 2 0 0 0 18 4h-5v16h5a2 2 0 0 0 2-2V5.5Z" />
+      <path d="M11 4v16" />
+    </svg>
+  )
+}
+
+export function TicketIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a1.5 1.5 0 0 0 0 3v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a1.5 1.5 0 0 0 0-3V8Z" />
+      <path d="M9 6v12" strokeDasharray="2.2 2.2" />
+    </svg>
+  )
+}
+
+export function WheelIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" {...base} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M12 3.5v5.5" />
+      <path d="M12 15v5.5" />
+      <path d="M3.5 12h5.5" />
+      <path d="M15 12h5.5" />
+      <path d="M6 6l3.5 3.5" />
+      <path d="M14.5 14.5 18 18" />
+      <path d="M18 6l-3.5 3.5" />
+      <path d="M9.5 14.5 6 18" />
+    </svg>
+  )
+}
+
 export function Crest({ size = 22, ...rest }) {
   return (
     <svg

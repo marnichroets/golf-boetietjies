@@ -1,14 +1,17 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
-import { Crest, SwapIcon } from './icons'
+import { BookIcon, Crest, SwapIcon } from './icons'
+import Rulebook from './Rulebook'
 
 export default function TopBar() {
   const { connected, players } = useGolfData()
   const { playerId, setPlayerId } = useLocalPlayer()
   const navigate = useNavigate()
   const me = players.find((p) => p.id === playerId)
+  const [showRulebook, setShowRulebook] = useState(false)
 
   const switchPlayer = () => {
     setPlayerId(null)
@@ -22,6 +25,26 @@ export default function TopBar() {
         <span className="brand-word">Golf Boetietjies</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <button
+          onClick={() => setShowRulebook(true)}
+          aria-label="Open the rulebook"
+          title="Rulebook"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 36,
+            height: 36,
+            borderRadius: '50%',
+            border: '1px solid var(--border)',
+            background: 'var(--surface-alt)',
+            color: 'var(--brass)',
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
+          <BookIcon width={16} height={16} strokeWidth={1.9} />
+        </button>
         <div className="conn-pill">
           <span className={`sync-dot ${connected ? '' : 'pending'}`} />
           {connected ? 'Live' : 'Offline'}
@@ -65,6 +88,7 @@ export default function TopBar() {
           </>
         )}
       </div>
+      {showRulebook && <Rulebook onClose={() => setShowRulebook(false)} />}
     </div>
   )
 }
