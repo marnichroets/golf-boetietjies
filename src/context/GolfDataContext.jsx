@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { applyQueueToScores, loadQueue, queueClear, queueUpsert, removeFromQueue } from '../utils/offlineScoreQueue'
 
 const GolfDataContext = createContext(null)
 
@@ -50,6 +51,13 @@ export function GolfDataProvider({ children }) {
   const [connected, setConnected] = useState(true)
   const pendingRef = useRef(new Set())
   const [pendingVersion, setPendingVersion] = useState(0)
+  // Ref indirection so the mount-time load() effect (declared before
+  // flushScoreQueue exists further down) and the realtime subscribe
+  // callback can both trigger a flush without being in flushScoreQueue's
+  // dependency array. Reassigned on every render, so it's always current
+  // by the time any effect actually calls it.
+  const flushScoreQueueRef = useRef(() => {})
+  const isFlushingQueueRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -75,13 +83,20 @@ export function GolfDataProvider({ children }) {
       if (cancelled) return
       if (playersRes.data) setPlayers(playersRes.data)
       if (holesRes.data) setCourseHoles(groupHolesByRound(holesRes.data))
-      if (scoresRes.data) setScores(scoresToNested(scoresRes.data))
+      if (scoresRes.data) {
+        // Anything still sitting in the offline queue from before this
+        // load (a reload while offline, or before the last flush finished)
+        // represents scores the player already entered — replay them on
+        // top of the server snapshot so they don't appear to vanish.
+        setScores(applyQueueToScores(scoresToNested(scoresRes.data), loadQueue()))
+      }
       if (claimsRes.data) setClaims(claimsToMap(claimsRes.data))
       if (settingsRes.data) setRyderCupEnabledState(!!settingsRes.data.ryder_cup_enabled)
       if (teamsRes.data) setTeams(teamsRes.data)
       if (pairingsRes.data) setPairings(pairingsRes.data)
       if (scorerLocksRes.data) setScorerLocks(scorerLocksRes.data)
       setLoading(false)
+      flushScoreQueueRef.current()
     }
 
     load()
@@ -147,10 +162,29 @@ export function GolfDataProvider({ children }) {
       })
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED')
+        // Reconnecting is exactly when a flush is most likely to actually
+        // land — catches anything the 'online' event or the poll missed.
+        if (status === 'SUBSCRIBED') flushScoreQueueRef.current()
       })
 
     return () => {
       supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Retries the local offline queue whenever the browser tells us it's
+  // back online, plus a slow poll as a safety net for browsers/OSes that
+  // don't fire 'online' reliably (some mobile Safari/PWA cases). The poll
+  // is a no-op read of localStorage when the queue is already empty.
+  useEffect(() => {
+    const handleOnline = () => flushScoreQueueRef.current()
+    window.addEventListener('online', handleOnline)
+    const pollId = setInterval(() => {
+      if (Object.keys(loadQueue()).length > 0) flushScoreQueueRef.current()
+    }, 5000)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      clearInterval(pollId)
     }
   }, [])
 
@@ -159,6 +193,45 @@ export function GolfDataProvider({ children }) {
     else pendingRef.current.delete(key)
     setPendingVersion((v) => v + 1)
   }, [])
+
+  // Drains the local offline queue in order, one write at a time. Stops at
+  // the first failure (network still down, or a real Supabase error) and
+  // leaves the rest queued — the 'online' listener, the poll above, and
+  // realtime reconnecting all call this again later, so nothing needs a
+  // retry counter or backoff of its own.
+  const flushScoreQueue = useCallback(async () => {
+    if (isFlushingQueueRef.current) return
+    isFlushingQueueRef.current = true
+    try {
+      const queue = loadQueue()
+      for (const key of Object.keys(queue)) {
+        const entry = queue[key]
+        try {
+          const { player_id, round, hole } = entry.payload
+          const { error } =
+            entry.type === 'upsert'
+              ? await supabase
+                  .from('scores')
+                  .upsert(entry.payload, { onConflict: 'player_id,round,hole' })
+              : await supabase.from('scores').delete().eq('player_id', player_id).eq('round', round).eq('hole', hole)
+          if (error) {
+            console.error('offline queue flush failed', error)
+            break
+          }
+          removeFromQueue(key)
+          markPending(key, false)
+        } catch {
+          // Fetch itself threw — still offline. Leave this and everything
+          // after it queued for the next trigger.
+          break
+        }
+      }
+    } finally {
+      isFlushingQueueRef.current = false
+    }
+  }, [markPending])
+
+  flushScoreQueueRef.current = flushScoreQueue
 
   const upsertScore = useCallback(
     (playerId, round, hole, strokes) => {
@@ -172,18 +245,10 @@ export function GolfDataProvider({ children }) {
       })
 
       markPending(key, true)
-      supabase
-        .from('scores')
-        .upsert(
-          { player_id: playerId, round, hole, strokes, updated_at: new Date().toISOString() },
-          { onConflict: 'player_id,round,hole' },
-        )
-        .then(({ error }) => {
-          if (error) console.error('score sync failed', error)
-          markPending(key, false)
-        })
+      queueUpsert(key, { player_id: playerId, round, hole, strokes, updated_at: new Date().toISOString() })
+      flushScoreQueue()
     },
-    [markPending],
+    [markPending, flushScoreQueue],
   )
 
   // Resets a cell back to genuinely unentered (not 0/P.U) by deleting its
@@ -201,18 +266,10 @@ export function GolfDataProvider({ children }) {
       })
 
       markPending(key, true)
-      supabase
-        .from('scores')
-        .delete()
-        .eq('player_id', playerId)
-        .eq('round', round)
-        .eq('hole', hole)
-        .then(({ error }) => {
-          if (error) console.error('score clear failed', error)
-          markPending(key, false)
-        })
+      queueClear(key, { player_id: playerId, round, hole })
+      flushScoreQueue()
     },
-    [markPending],
+    [markPending, flushScoreQueue],
   )
 
   const claimCategory = useCallback(

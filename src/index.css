@@ -739,9 +739,8 @@ textarea {
 
 .sc-cell {
   appearance: none;
-  aspect-ratio: 1;
-  max-height: 46px;
-  min-height: 44px;
+  max-height: 54px;
+  min-height: 50px;
   width: 100%;
   border-radius: 10px;
   font-family: var(--font-display);

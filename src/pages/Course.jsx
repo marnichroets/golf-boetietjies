@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { Crest, DoglegRightIcon, MapIcon, SplitFairwayIcon, StraightHoleIcon, WaterHazardIcon } from '../components/icons'
+import { ROUND_FORMAT_LABELS } from '../utils/roundFormats'
 
 const FRONT_NINE = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 const BACK_NINE = [10, 11, 12, 13, 14, 15, 16, 17, 18]
@@ -83,10 +84,12 @@ export default function Course() {
       <div className="segmented" style={{ marginBottom: 16 }}>
         {[1, 2].map((r) => (
           <button key={r} className={round === r ? 'active' : ''} onClick={() => setRound(r)}>
-            Round {r}
+            Round {r} · {ROUND_FORMAT_LABELS[r]}
           </button>
         ))}
       </div>
+
+      <CourseMap />
 
       {holes.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
@@ -121,6 +124,36 @@ export default function Course() {
             <SumRow label="TOTAL" par={outPar + inPar} metres={outMetres + inMetres} total />
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+// Just an <img> for a map photo dropped into /public/course-map.jpg — shows
+// a placeholder card until that file actually exists.
+function CourseMap() {
+  const [failed, setFailed] = useState(false)
+
+  return (
+    <div className="card-flush" style={{ marginBottom: 14 }}>
+      <div className="nine-heading">
+        <MapIcon width={14} height={14} style={{ color: 'var(--brass)' }} />
+        Course Map
+      </div>
+      {failed ? (
+        <div style={{ padding: '30px 16px 34px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 12.5 }}>
+          <MapIcon width={26} height={26} style={{ color: 'var(--border-strong)', marginBottom: 8 }} />
+          <div>
+            No map image yet — drop <code>course-map.jpg</code> into <code>/public</code>.
+          </div>
+        </div>
+      ) : (
+        <img
+          src="/course-map.jpg"
+          alt="Zebula Elephant course map"
+          style={{ width: '100%', display: 'block' }}
+          onError={() => setFailed(true)}
+        />
       )}
     </div>
   )

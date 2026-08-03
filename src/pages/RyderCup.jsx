@@ -3,6 +3,7 @@ import { useGolfData } from '../context/GolfDataContext'
 import { computeMatchStatus, matchPoints, formatPoints } from '../utils/matchplay'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import { PencilIcon } from '../components/icons'
+import { ROUND_FORMAT_LABELS } from '../utils/roundFormats'
 
 const MATCH_SLOTS = [
   { matchNumber: 1, format: 'fourball' },
@@ -64,7 +65,7 @@ export default function RyderCup() {
       <div className="segmented" style={{ marginBottom: 16 }}>
         {[1, 2].map((r) => (
           <button key={r} className={round === r ? 'active' : ''} onClick={() => setRound(r)}>
-            Round {r}
+            Round {r} · {ROUND_FORMAT_LABELS[r]}
           </button>
         ))}
       </div>

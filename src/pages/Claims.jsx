@@ -2,6 +2,7 @@ import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import { FlagIcon, TargetIcon } from '../components/icons'
+import { ROUND_FORMAT_LABELS } from '../utils/roundFormats'
 
 const CATEGORIES = [
   { key: 'longest_drive', label: 'Longest Drive', Icon: FlagIcon },
@@ -35,7 +36,7 @@ export default function Claims() {
               return (
                 <div key={round} className="card" style={{ padding: 14, textAlign: 'center' }}>
                   <div className="eyebrow" style={{ marginBottom: 10 }}>
-                    Round {round}
+                    Round {round} · {ROUND_FORMAT_LABELS[round]}
                   </div>
                   {holder ? (
                     <>
