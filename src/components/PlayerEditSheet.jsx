@@ -102,7 +102,13 @@ export default function PlayerEditSheet({ player, onClose }) {
               <CameraIcon width={12} height={12} strokeWidth={2.2} />
             </div>
           </button>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhoto} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.bmp,.svg"
+            hidden
+            onChange={onPhoto}
+          />
           <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>
             {uploading ? 'Uploading…' : 'Tap the avatar to change photo'}
           </div>

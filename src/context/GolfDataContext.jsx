@@ -4,6 +4,18 @@ import { applyQueueToScores, loadQueue, queueClear, queueUpsert, removeFromQueue
 
 const GolfDataContext = createContext(null)
 
+const MIME_BY_EXTENSION = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  bmp: 'image/bmp',
+  svg: 'image/svg+xml',
+}
+
 function groupHolesByRound(rows) {
   const byRound = { 1: [], 2: [] }
   for (const row of rows) {
@@ -377,11 +389,17 @@ export function GolfDataProvider({ children }) {
   }, [])
 
   const uploadPlayerPhoto = useCallback(async (playerId, file) => {
-    const ext = file.name.split('.').pop()
+    const ext = file.name.split('.').pop().toLowerCase()
     const path = `${playerId}-${Date.now()}.${ext}`
+    // Pin the content type from the extension rather than trusting the
+    // browser-reported file.type — Chromium on Windows can source that
+    // from a per-extension registry lookup, which some machines have seen
+    // come back empty/wrong for .jpg specifically while .jpeg works fine.
+    const contentType = MIME_BY_EXTENSION[ext] || file.type || 'application/octet-stream'
     const { error: uploadError } = await supabase.storage.from('player-photos').upload(path, file, {
       cacheControl: '3600',
       upsert: true,
+      contentType,
     })
     if (uploadError) throw uploadError
     const { data } = supabase.storage.from('player-photos').getPublicUrl(path)
