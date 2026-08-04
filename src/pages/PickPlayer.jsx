@@ -9,7 +9,7 @@ export default function PickPlayer() {
     <div className="app-main" style={{ paddingBottom: 40, paddingTop: 22 }}>
       <div className="front-door-banner fairway">
         <div className="front-door-logo-plate">
-          <img src="/logo-full-transparent.png" alt="Golf Boetietjies" />
+          <img src="/logo-full-transparent-clean.png" alt="Golf Boetietjies" />
         </div>
         <p className="page-subtitle">Pick your name. No hiding your handicap now.</p>
       </div>

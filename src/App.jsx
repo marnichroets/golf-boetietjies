@@ -20,7 +20,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="center-screen">
-        <img src="/logo-full-transparent.png" alt="Golf Boetietjies" style={{ width: 140, margin: '0 auto 14px' }} />
+        <img src="/logo-full-transparent-clean.png" alt="Golf Boetietjies" style={{ width: 140, margin: '0 auto 14px' }} />
         <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Loading the boys' trip…</p>
       </div>
     )

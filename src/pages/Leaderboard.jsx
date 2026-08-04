@@ -11,7 +11,7 @@ const VIEWS = [
 ]
 
 export default function Leaderboard() {
-  const { players, courseHoles, scores } = useGolfData()
+  const { players, courseHoles, scores, ryderCupEnabled, teams } = useGolfData()
   const [view, setView] = useState('combined')
 
   const rows = useMemo(() => {
@@ -47,6 +47,9 @@ export default function Leaderboard() {
         {rows.map((row, idx) => {
           const rankClass = idx === 0 ? 'rank-1' : idx === 1 ? 'rank-2' : idx === 2 ? 'rank-3' : ''
           const isLeader = idx === 0 && row.points > 0
+          // Subtle team tie-in only — off entirely unless Ryder Cup mode is
+          // on, same as everywhere else this feature touches the UI.
+          const team = ryderCupEnabled ? teams.find((t) => t.id === row.player.team_id) : null
           return (
             <div
               key={row.player.id}
@@ -57,6 +60,8 @@ export default function Leaderboard() {
                 gap: 12,
                 padding: '12px 14px',
                 border: isLeader ? '1px solid var(--border-strong)' : '1px solid var(--border)',
+                borderLeftWidth: team ? 3 : undefined,
+                borderLeftColor: team ? team.color : undefined,
                 boxShadow: isLeader ? '0 14px 30px -16px rgba(201,162,39,0.45), var(--shadow-card)' : 'var(--shadow-card)',
               }}
             >

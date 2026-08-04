@@ -21,7 +21,7 @@ export default function TopBar() {
   return (
     <div className="top-bar fairway">
       <div className="brand-plate">
-        <img src="/logo-full-transparent.png" alt="Golf Boetietjies" />
+        <img src="/logo-full-transparent-clean.png" alt="Golf Boetietjies" />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <button
@@ -50,19 +50,22 @@ export default function TopBar() {
         </div>
         {me && (
           <>
-            <span className="pill" style={{ border: '1px solid var(--border)' }}>
+            <span className="pill" style={{ border: '1px solid var(--border)', minWidth: 0, flexShrink: 1 }}>
               <span
                 className="avatar"
                 style={{
                   width: 18,
                   height: 18,
                   fontSize: 11,
+                  flexShrink: 0,
                   background: me.photo_url ? 'transparent' : playerColor(me),
                 }}
               >
                 {me.photo_url ? <img src={me.photo_url} alt="" /> : playerEmoji(me)}
               </span>
-              {me.name}
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 72 }}>
+                {me.name}
+              </span>
             </span>
             <button
               onClick={switchPlayer}

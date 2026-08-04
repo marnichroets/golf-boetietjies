@@ -164,6 +164,9 @@ const fieldInput = {
   border: '1px solid var(--border)',
   borderRadius: 'var(--radius-sm)',
   padding: '12px 14px',
-  fontSize: 15,
+  // 16px minimum — iOS Safari auto-zooms the whole page on focus of any
+  // text input smaller than this, and since it's an SPA the zoomed-in
+  // state then persists across every other screen until manually reset.
+  fontSize: 16,
   color: 'var(--text)',
 }

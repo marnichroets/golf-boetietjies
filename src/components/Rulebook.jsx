@@ -56,7 +56,7 @@ export default function Rulebook({ onClose }) {
         <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)', margin: '0 auto 16px' }} />
 
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <img src="/logo-full-transparent.png" alt="Golf Boetietjies" style={{ height: 30, margin: '0 auto 10px' }} />
+          <img src="/logo-full-transparent-clean.png" alt="Golf Boetietjies" style={{ height: 30, margin: '0 auto 10px' }} />
           <div className="eyebrow" style={{ marginBottom: 4 }}>
             ⛳ The Zebula Cup
           </div>
@@ -75,6 +75,17 @@ export default function Rulebook({ onClose }) {
               </div>
             ))}
           </div>
+        </RuleSection>
+
+        <RuleSection title="Friday Night — The Draft">
+          <p style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, margin: '0 0 8px' }}>
+            Two captains have already been chosen. Friday night, they'll be revealed and go head-to-head in a
+            draft, picking their teams one player at a time until all 14 are split into Red and Blue. No hiding,
+            no trades — whoever gets picked, gets picked.
+          </p>
+          <p style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, margin: 0 }}>
+            Once teams are set, they're locked for the whole weekend across both rounds.
+          </p>
         </RuleSection>
 
         <RuleSection title="Scoring — Stableford, Explained Once So Nobody Argues">
@@ -101,6 +112,11 @@ export default function Rulebook({ onClose }) {
         </RuleSection>
 
         <RuleSection title="House Rules — The Fines">
+          <p style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, margin: '0 0 10px' }}>
+            Catch someone in the act? Open the <strong style={{ color: 'var(--text)' }}>Fines</strong> tab, tap the
+            offence, tap who did it, hit <strong style={{ color: 'var(--text)' }}>Log Fine</strong>. It's logged
+            live for everyone to see, with your name attached as the one who called it out.
+          </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {FINE_REASONS.map((reason) => (
               <span
@@ -112,6 +128,26 @@ export default function Rulebook({ onClose }) {
               </span>
             ))}
           </div>
+        </RuleSection>
+
+        <RuleSection title="Claims — Longest Drive & Nearest the Pin">
+          <p style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, margin: 0 }}>
+            Bombed one off the tee or stuck it close? Head to the <strong style={{ color: 'var(--text)' }}>Claims</strong> tab
+            and tap <strong style={{ color: 'var(--text)' }}>I've got this</strong> under Longest Drive or Nearest
+            the Pin for that round — one holder per category, per round, self-declared and up for grabs the whole
+            round. Attach a photo if you want proof, and reclaim or unclaim any time someone tops you (or you
+            fessed up too early).
+          </p>
+        </RuleSection>
+
+        <RuleSection title="The Scorer Lock">
+          <p style={{ fontSize: 12.5, color: 'var(--text-dim)', lineHeight: 1.5, margin: 0 }}>
+            First time your fourball opens the <strong style={{ color: 'var(--text)' }}>Scorecard</strong>, you'll
+            be asked who's keeping score. Only that person's phone can enter strokes for the group that round —
+            everyone else watches the same scorecard update live, read-only, so nobody's numbers get overwritten
+            by accident. Any of you can tap <strong style={{ color: 'var(--text)' }}>Change scorer</strong> to hand
+            it to someone else mid-round.
+          </p>
         </RuleSection>
 
         <RuleSection title="Trophies" last>

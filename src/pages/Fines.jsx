@@ -78,6 +78,7 @@ export default function Fines() {
               key={f.id}
               fine={f}
               player={players.find((p) => p.id === f.player_id)}
+              loggedBy={players.find((p) => p.id === f.logged_by_player_id)}
               canDelete={!!myId && f.logged_by_player_id === myId}
               onDelete={() => deleteFine(f.id)}
             />
@@ -92,7 +93,7 @@ function EmptyRow({ text }) {
   return <div style={{ padding: '18px 16px', textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>{text}</div>
 }
 
-function FineRow({ fine, player, canDelete, onDelete }) {
+function FineRow({ fine, player, loggedBy, canDelete, onDelete }) {
   return (
     <div
       style={{
@@ -115,6 +116,7 @@ function FineRow({ fine, player, canDelete, onDelete }) {
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {fine.reason}
+          {loggedBy && <span style={{ color: 'var(--text-faint)' }}> · logged by {loggedBy.name}</span>}
         </div>
       </div>
       <span style={{ fontSize: 11, color: 'var(--text-faint)', flexShrink: 0 }}>{fineTimestamp(fine.created_at)}</span>

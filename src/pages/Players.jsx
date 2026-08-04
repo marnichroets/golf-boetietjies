@@ -9,6 +9,7 @@ export default function Players() {
   const { players, teams, ryderCupEnabled, setRyderCupEnabled, updateTeam, updatePlayer } = useGolfData()
   const { playerId } = useLocalPlayer()
   const [editing, setEditing] = useState(null)
+  const [lightboxPlayer, setLightboxPlayer] = useState(null)
 
   // Only one captain per team: setting a new one clears the flag from
   // whoever else on that team already held it.
@@ -41,12 +42,18 @@ export default function Players() {
           const team = teams.find((t) => t.id === p.team_id)
           return (
             <div key={p.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 13, flexWrap: 'wrap' }}>
-              <span
+              <button
+                type="button"
                 className="avatar"
+                onClick={() => p.photo_url && setLightboxPlayer(p)}
+                aria-label={p.photo_url ? `View ${p.name}'s photo` : undefined}
                 style={{
                   width: 52,
                   height: 52,
                   fontSize: 22,
+                  padding: 0,
+                  border: 'none',
+                  cursor: p.photo_url ? 'pointer' : 'default',
                   background: p.photo_url ? 'transparent' : playerColor(p),
                   boxShadow:
                     p.id === playerId
@@ -55,7 +62,7 @@ export default function Players() {
                 }}
               >
                 {p.photo_url ? <img src={p.photo_url} alt={p.name} /> : playerEmoji(p)}
-              </span>
+              </button>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   {p.name}
@@ -121,6 +128,7 @@ export default function Players() {
       </div>
 
       {editing && <PlayerEditSheet player={editing} onClose={() => setEditing(null)} />}
+      {lightboxPlayer && <PhotoLightbox player={lightboxPlayer} onClose={() => setLightboxPlayer(null)} />}
     </div>
   )
 }
@@ -181,10 +189,41 @@ function TeamEditor({ team, updateTeam }) {
           background: 'transparent',
           fontWeight: 800,
           fontFamily: 'var(--font-display)',
-          fontSize: 15,
+          fontSize: 16,
           color: team.color,
           padding: 0,
           marginBottom: 0,
+        }}
+      />
+    </div>
+  )
+}
+
+function PhotoLightbox({ player, onClose }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(4, 8, 5, 0.85)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        zIndex: 200,
+      }}
+      onClick={onClose}
+    >
+      <img
+        src={player.photo_url}
+        alt={player.name}
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          maxHeight: '80vh',
+          objectFit: 'contain',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-pop)',
         }}
       />
     </div>

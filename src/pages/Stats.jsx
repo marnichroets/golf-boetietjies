@@ -1,20 +1,33 @@
 import { useMemo } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { computeStats } from '../utils/stats'
-import { FlameIcon, GolfBallIcon, SnowflakeIcon, TargetIcon } from '../components/icons'
+import { playerColor, playerEmoji } from '../utils/playerVisuals'
+import { FlameIcon, GolfBallIcon, SnowflakeIcon, TargetIcon, TicketIcon } from '../components/icons'
 
 export default function Stats() {
-  const { players, scores, courseHoles } = useGolfData()
+  const { players, scores, courseHoles, fines } = useGolfData()
   const stats = useMemo(() => computeStats(players, scores, courseHoles), [players, scores, courseHoles])
+
+  // Most-fined-first leaderboard — only players with at least one fine
+  // logged show up, so a clean trip doesn't clutter the list with zeros.
+  const fineLeaders = useMemo(() => {
+    const counts = new Map()
+    for (const f of fines) counts.set(f.player_id, (counts.get(f.player_id) || 0) + 1)
+    return [...counts.entries()]
+      .map(([playerId, count]) => ({ player: players.find((p) => p.id === playerId), count }))
+      .filter((row) => row.player)
+      .sort((a, b) => b.count - a.count)
+  }, [fines, players])
 
   if (!stats) {
     return (
       <div>
         <h1 className="page-title">Fun Stats</h1>
         <p className="page-subtitle">The banter starts once scores hit the board.</p>
-        <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>
+        <div className="card" style={{ textAlign: 'center', color: 'var(--text-dim)', marginBottom: fineLeaders.length ? 20 : 0 }}>
           Quiet in the clubhouse. Go post a score.
         </div>
+        {fineLeaders.length > 0 && <FineLeaderboard fineLeaders={fineLeaders} />}
       </div>
     )
   }
@@ -71,6 +84,48 @@ export default function Stats() {
             </div>
           ))}
         </div>
+      </div>
+
+      {fineLeaders.length > 0 && (
+        <>
+          <div className="ball-divider">
+            <GolfBallIcon width={15} height={15} strokeWidth={1.4} />
+          </div>
+          <FineLeaderboard fineLeaders={fineLeaders} />
+        </>
+      )}
+    </div>
+  )
+}
+
+function FineLeaderboard({ fineLeaders }) {
+  return (
+    <div className="card">
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17 }}>Fine Leaderboard</span>
+        <span className="eyebrow">Most fined</span>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {fineLeaders.map((row, i) => (
+          <div key={row.player.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span className="eyebrow" style={{ width: 16, flexShrink: 0 }}>
+              {i + 1}
+            </span>
+            <span
+              className="avatar"
+              style={{ width: 28, height: 28, fontSize: 13, flexShrink: 0, background: row.player.photo_url ? 'transparent' : playerColor(row.player) }}
+            >
+              {row.player.photo_url ? <img src={row.player.photo_url} alt="" /> : playerEmoji(row.player)}
+            </span>
+            <span style={{ flex: 1, minWidth: 0, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {row.player.name}
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13.5, fontWeight: 700, color: 'var(--brass-ink)', flexShrink: 0 }}>
+              <TicketIcon width={13} height={13} />
+              {row.count}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   )
