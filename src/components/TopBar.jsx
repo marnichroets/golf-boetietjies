@@ -35,8 +35,12 @@ export default function TopBar() {
             width: 36,
             height: 36,
             borderRadius: '50%',
-            border: '1px solid var(--border)',
-            background: 'var(--surface-alt)',
+            // Brass-tinted rather than the neutral surface every other
+            // circular icon button here uses — makes it stand out on
+            // repeat visits without growing its footprint (no room in
+            // this bar for a text label at 320-375px).
+            border: '1px solid rgba(171,124,30,0.4)',
+            background: 'rgba(171,124,30,0.16)',
             color: 'var(--brass)',
             cursor: 'pointer',
             flexShrink: 0,

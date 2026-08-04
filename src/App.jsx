@@ -3,6 +3,7 @@ import { useGolfData } from './context/GolfDataContext'
 import { useLocalPlayer } from './context/LocalPlayerContext'
 import BottomNav from './components/BottomNav'
 import TopBar from './components/TopBar'
+import RulebookPrompt from './components/RulebookPrompt'
 import PickPlayer from './pages/PickPlayer'
 import Players from './pages/Players'
 import Scorecard from './pages/Scorecard'
@@ -34,6 +35,7 @@ export default function App() {
     <>
       <div className="app-main">
         <TopBar />
+        <RulebookPrompt />
         <Routes>
           <Route path="/" element={<Navigate to="/leaderboard" replace />} />
           <Route path="/leaderboard" element={<Leaderboard />} />

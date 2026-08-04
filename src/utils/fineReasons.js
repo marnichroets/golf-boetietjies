@@ -10,4 +10,5 @@ export const FINE_REASONS = [
   "Tee shot doesn't clear the ladies' tee",
   'Calling your shot then failing it',
   'Talking during someone’s backswing',
+  'Back to the Future',
 ]

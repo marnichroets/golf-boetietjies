@@ -11,6 +11,11 @@ const LocalPlayerContext = createContext(null)
 
 export function LocalPlayerProvider({ children }) {
   const [playerId, setPlayerIdState] = useState(() => localStorage.getItem(STORAGE_KEY))
+  // True only for the render(s) right after an explicit pick action —
+  // never true for a returning player auto-logged-in from a stored id on
+  // mount. Lets a "new here?" prompt fire once right after picking without
+  // reappearing on every ordinary reopen.
+  const [justPicked, setJustPicked] = useState(false)
 
   useEffect(() => {
     const onStorage = (e) => {
@@ -24,10 +29,15 @@ export function LocalPlayerProvider({ children }) {
     if (id) localStorage.setItem(STORAGE_KEY, id)
     else localStorage.removeItem(STORAGE_KEY)
     setPlayerIdState(id)
+    setJustPicked(!!id)
   }, [])
 
+  const clearJustPicked = useCallback(() => setJustPicked(false), [])
+
   return (
-    <LocalPlayerContext.Provider value={{ playerId, setPlayerId }}>{children}</LocalPlayerContext.Provider>
+    <LocalPlayerContext.Provider value={{ playerId, setPlayerId, justPicked, clearJustPicked }}>
+      {children}
+    </LocalPlayerContext.Provider>
   )
 }
 
