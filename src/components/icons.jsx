@@ -249,19 +249,14 @@ export function TicketIcon(props) {
   )
 }
 
-export function WheelIcon(props) {
+export function TrashIcon(props) {
   return (
     <svg viewBox="0 0 24 24" {...base} {...props}>
-      <circle cx="12" cy="12" r="8.5" />
-      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
-      <path d="M12 3.5v5.5" />
-      <path d="M12 15v5.5" />
-      <path d="M3.5 12h5.5" />
-      <path d="M15 12h5.5" />
-      <path d="M6 6l3.5 3.5" />
-      <path d="M14.5 14.5 18 18" />
-      <path d="M18 6l-3.5 3.5" />
-      <path d="M9.5 14.5 6 18" />
+      <path d="M5 7h14" />
+      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      <path d="M7 7l1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
     </svg>
   )
 }

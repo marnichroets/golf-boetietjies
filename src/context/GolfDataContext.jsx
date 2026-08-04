@@ -59,11 +59,10 @@ export function GolfDataProvider({ children }) {
   // migration yet just gets an empty list back, and every group scores
   // open/unlocked exactly like before this feature existed.
   const [scorerLocks, setScorerLocks] = useState([])
-  // Fines and wheel spins are optional like the tables above — a database
-  // that hasn't run supabase/fines_and_wheel.sql yet just gets empty lists
-  // back, and those two tabs quietly render with nothing logged.
+  // Fines are optional like the tables above — a database that hasn't run
+  // supabase/fines_and_wheel.sql yet just gets an empty list back, and the
+  // Fines tab quietly renders with nothing logged.
   const [fines, setFines] = useState([]) // newest first
-  const [wheelSpins, setWheelSpins] = useState([]) // newest first
   const [loading, setLoading] = useState(true)
   const [connected, setConnected] = useState(true)
   const pendingRef = useRef(new Set())
@@ -80,7 +79,7 @@ export function GolfDataProvider({ children }) {
     let cancelled = false
 
     async function load() {
-      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes, scorerLocksRes, finesRes, wheelSpinsRes] =
+      const [playersRes, holesRes, scoresRes, claimsRes, settingsRes, teamsRes, pairingsRes, scorerLocksRes, finesRes] =
         await Promise.all([
           supabase
             .from('players')
@@ -90,7 +89,7 @@ export function GolfDataProvider({ children }) {
           supabase.from('course_holes').select('*'),
           supabase.from('scores').select('*'),
           supabase.from('claims').select('*'),
-          // These six tables (supabase/ryder_cup.sql, supabase/scorer_lock.sql,
+          // These five tables (supabase/ryder_cup.sql, supabase/scorer_lock.sql,
           // supabase/fines_and_wheel.sql) are optional — on a database that
           // hasn't run those migrations yet, these queries just error out and
           // the features quietly stay off/empty.
@@ -99,7 +98,6 @@ export function GolfDataProvider({ children }) {
           supabase.from('pairings').select('*'),
           supabase.from('scorer_locks').select('*'),
           supabase.from('fines').select('*').order('created_at', { ascending: false }),
-          supabase.from('wheel_spins').select('*').order('created_at', { ascending: false }),
         ])
       if (cancelled) return
       if (playersRes.data) setPlayers(playersRes.data)
@@ -117,7 +115,6 @@ export function GolfDataProvider({ children }) {
       if (pairingsRes.data) setPairings(pairingsRes.data)
       if (scorerLocksRes.data) setScorerLocks(scorerLocksRes.data)
       if (finesRes.data) setFines(finesRes.data)
-      if (wheelSpinsRes.data) setWheelSpins(wheelSpinsRes.data)
       setLoading(false)
       flushScoreQueueRef.current()
     }
@@ -154,9 +151,23 @@ export function GolfDataProvider({ children }) {
         })
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'claims' }, (payload) => {
-        const row = payload.new?.id ? payload.new : payload.old
+        // Unclaiming deletes the row outright — with REPLICA IDENTITY FULL
+        // (see supabase/fines_claims_updates.sql) payload.old carries the
+        // full row, so the category/round key can be found and cleared
+        // instead of (incorrectly) being reinstated with the stale value.
+        if (payload.eventType === 'DELETE') {
+          const row = payload.old
+          if (!row) return
+          setClaims((prev) => {
+            const next = { ...prev }
+            delete next[`${row.category}:${row.round}`]
+            return next
+          })
+          return
+        }
+        const row = payload.new
         if (!row) return
-        setClaims((prev) => ({ ...prev, [`${row.category}:${row.round}`]: payload.new ?? row }))
+        setClaims((prev) => ({ ...prev, [`${row.category}:${row.round}`]: row }))
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'app_settings' }, (payload) => {
         if (!payload.new) return
@@ -169,13 +180,15 @@ export function GolfDataProvider({ children }) {
         setPairings((prev) => applyRowChange(prev, payload))
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fines' }, (payload) => {
-        // Insert-only log — merge by id (idempotent) since the device that
+        // Insert-only merge by id (idempotent) since the device that
         // logged it already appended the exact same real row itself, from
         // the insert's own response, and may beat this broadcast there.
         setFines((prev) => (prev.some((f) => f.id === payload.new.id) ? prev : [payload.new, ...prev]))
       })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'wheel_spins' }, (payload) => {
-        setWheelSpins((prev) => (prev.some((s) => s.id === payload.new.id) ? prev : [payload.new, ...prev]))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'fines' }, (payload) => {
+        const row = payload.old
+        if (!row) return
+        setFines((prev) => prev.filter((f) => f.id !== row.id))
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'scorer_locks' }, (payload) => {
         // Matched by (round, group_key) rather than id — the optimistic
@@ -304,18 +317,21 @@ export function GolfDataProvider({ children }) {
     [markPending, flushScoreQueue],
   )
 
+  // photoUrl is optional proof of the shot — null clears/omits it (e.g. a
+  // reclaim without a new photo keeps whatever was passed in, since the
+  // caller always supplies the full current photo choice explicitly).
   const claimCategory = useCallback(
-    (category, round, playerId) => {
+    (category, round, playerId, photoUrl = null) => {
       const key = `claim:${category}:${round}`
       const now = new Date().toISOString()
       setClaims((prev) => ({
         ...prev,
-        [`${category}:${round}`]: { category, round, player_id: playerId, updated_at: now },
+        [`${category}:${round}`]: { category, round, player_id: playerId, photo_url: photoUrl, updated_at: now },
       }))
       markPending(key, true)
       supabase
         .from('claims')
-        .upsert({ category, round, player_id: playerId, updated_at: now }, { onConflict: 'category,round' })
+        .upsert({ category, round, player_id: playerId, photo_url: photoUrl, updated_at: now }, { onConflict: 'category,round' })
         .then(({ error }) => {
           if (error) console.error('claim sync failed', error)
           markPending(key, false)
@@ -324,16 +340,43 @@ export function GolfDataProvider({ children }) {
     [markPending],
   )
 
-  // Both merge the freshly-inserted real row into local state directly
-  // (rather than an optimistic placeholder id) so the realtime INSERT
-  // handler's id-based dedupe above can never end up with two copies of
-  // the same log entry, regardless of which one lands first.
-  const logFine = useCallback((playerId, reason) => {
+  // Courtesy-based like everything else here — anyone can unclaim (the
+  // existing "Reclaim" button already let anyone overwrite a claim with no
+  // gate at all, so this is no less permissive than what already existed).
+  const unclaimCategory = useCallback(
+    (category, round) => {
+      const key = `claim:${category}:${round}`
+      setClaims((prev) => {
+        const next = { ...prev }
+        delete next[`${category}:${round}`]
+        return next
+      })
+      markPending(key, true)
+      supabase
+        .from('claims')
+        .delete()
+        .eq('category', category)
+        .eq('round', round)
+        .then(({ error }) => {
+          if (error) console.error('unclaim failed', error)
+          markPending(key, false)
+        })
+    },
+    [markPending],
+  )
+
+  // Merges the freshly-inserted real row into local state directly (rather
+  // than an optimistic placeholder id) so the realtime INSERT handler's
+  // id-based dedupe above can never end up with two copies of the same log
+  // entry, regardless of which one lands first. loggedByPlayerId records
+  // whoever was the active local player on the logging device, which is
+  // the courtesy gate deleteFine checks against.
+  const logFine = useCallback((playerId, reason, loggedByPlayerId) => {
     const key = `fine:${playerId}:${Date.now()}`
     markPending(key, true)
     supabase
       .from('fines')
-      .insert({ player_id: playerId, reason })
+      .insert({ player_id: playerId, reason, logged_by_player_id: loggedByPlayerId ?? null })
       .select()
       .single()
       .then(({ data, error }) => {
@@ -346,20 +389,19 @@ export function GolfDataProvider({ children }) {
       })
   }, [markPending])
 
-  const logWheelSpin = useCallback((playerId, club) => {
-    const key = `wheel-spin:${playerId}:${Date.now()}`
+  // Courtesy-gated in the UI (only shown when the active local player is
+  // the one who logged it) — this just performs the delete once that gate
+  // has already let the user through.
+  const deleteFine = useCallback((fineId) => {
+    const key = `fine-delete:${fineId}`
+    setFines((prev) => prev.filter((f) => f.id !== fineId))
     markPending(key, true)
     supabase
-      .from('wheel_spins')
-      .insert({ player_id: playerId, club })
-      .select()
-      .single()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('wheel spin log failed', error)
-        } else {
-          setWheelSpins((prev) => (prev.some((s) => s.id === data.id) ? prev : [data, ...prev]))
-        }
+      .from('fines')
+      .delete()
+      .eq('id', fineId)
+      .then(({ error }) => {
+        if (error) console.error('fine delete failed', error)
         markPending(key, false)
       })
   }, [markPending])
@@ -466,6 +508,23 @@ export function GolfDataProvider({ children }) {
     return data.publicUrl
   }, [])
 
+  // Optional proof-of-shot photo for a Longest Drive / Nearest the Pin
+  // claim — a separate bucket from player-photos since these are one-off
+  // trip snapshots, not a profile picture.
+  const uploadClaimPhoto = useCallback(async (category, round, file) => {
+    const ext = file.name.split('.').pop().toLowerCase()
+    const path = `${category}-${round}-${Date.now()}.${ext}`
+    const contentType = MIME_BY_EXTENSION[ext] || file.type || 'application/octet-stream'
+    const { error: uploadError } = await supabase.storage.from('claim-photos').upload(path, file, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType,
+    })
+    if (uploadError) throw uploadError
+    const { data } = supabase.storage.from('claim-photos').getPublicUrl(path)
+    return data.publicUrl
+  }, [])
+
   const isPending = useCallback((key) => pendingRef.current.has(key), [pendingVersion])
 
   const value = useMemo(
@@ -481,22 +540,23 @@ export function GolfDataProvider({ children }) {
       pairings,
       scorerLocks,
       fines,
-      wheelSpins,
       upsertScore,
       clearScore,
       claimCategory,
+      unclaimCategory,
       updatePlayer,
       uploadPlayerPhoto,
+      uploadClaimPhoto,
       isPending,
       setRyderCupEnabled,
       updateTeam,
       savePairing,
       setScorerLock,
       logFine,
-      logWheelSpin,
+      deleteFine,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, scorerLocks, fines, wheelSpins, pendingVersion],
+    [players, courseHoles, scores, claims, loading, connected, ryderCupEnabled, teams, pairings, scorerLocks, fines, pendingVersion],
   )
 
   return <GolfDataContext.Provider value={value}>{children}</GolfDataContext.Provider>
