@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { computeStats } from '../utils/stats'
+import { buildBanter } from '../utils/banter'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import { FlameIcon, GolfBallIcon, SnowflakeIcon, TargetIcon, TicketIcon } from '../components/icons'
 
@@ -19,6 +20,25 @@ export default function Stats() {
       .sort((a, b) => b.count - a.count)
   }, [fines, players])
 
+  // Re-rolls the random line only when the actual spotlighted stat changes
+  // (a new leader, a new worst hole, a longer streak) — not on every
+  // unrelated score elsewhere, which would otherwise flicker the wording
+  // on screen for no reason.
+  const banter = useMemo(
+    () => buildBanter(stats),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      stats?.mostPars?.player?.id,
+      stats?.mostPars?.count,
+      stats?.blowUp?.player?.id,
+      stats?.blowUp?.hole,
+      stats?.blowUp?.strokes,
+      stats?.blowUp?.round,
+      stats?.mostConsistent?.player?.id,
+      stats?.mostConsistent?.holesPlayed,
+    ],
+  )
+
   if (!stats) {
     return (
       <div>
@@ -30,19 +50,6 @@ export default function Stats() {
         {fineLeaders.length > 0 && <FineLeaderboard fineLeaders={fineLeaders} />}
       </div>
     )
-  }
-
-  const banter = []
-  if (stats.mostPars) {
-    banter.push(`${stats.mostPars.player.name} is the most reliable in the group with ${stats.mostPars.count} par${stats.mostPars.count === 1 ? '' : 's'}.`)
-  }
-  if (stats.blowUp) {
-    banter.push(
-      `Biggest blow-up: ${stats.blowUp.player.name} carded a ${stats.blowUp.strokes} on hole ${stats.blowUp.hole} (par ${stats.blowUp.par}, Round ${stats.blowUp.round}). Rough day at the office.`,
-    )
-  }
-  if (stats.mostConsistent) {
-    banter.push(`Iceman award: ${stats.mostConsistent.player.name} — barely a wobble in the scoring, hole after hole.`)
   }
 
   return (
