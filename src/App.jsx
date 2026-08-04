@@ -12,7 +12,6 @@ import Claims from './pages/Claims'
 import Fines from './pages/Fines'
 import Stats from './pages/Stats'
 import RyderCup from './pages/RyderCup'
-import { Crest } from './components/icons'
 
 export default function App() {
   const { loading, ryderCupEnabled } = useGolfData()
@@ -21,7 +20,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="center-screen">
-        <Crest size={38} style={{ color: 'var(--brass)', margin: '0 auto 14px' }} />
+        <img src="/logo-full-transparent.png" alt="Golf Boetietjies" style={{ width: 140, margin: '0 auto 14px' }} />
         <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Loading the boys' trip…</p>
       </div>
     )

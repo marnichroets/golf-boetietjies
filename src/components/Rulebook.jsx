@@ -56,6 +56,7 @@ export default function Rulebook({ onClose }) {
         <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border-strong)', margin: '0 auto 16px' }} />
 
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <img src="/logo-full-transparent.png" alt="Golf Boetietjies" style={{ height: 30, margin: '0 auto 10px' }} />
           <div className="eyebrow" style={{ marginBottom: 4 }}>
             ⛳ The Zebula Cup
           </div>

@@ -446,30 +446,23 @@ textarea {
   z-index: 1;
 }
 
-.brand {
-  display: flex;
+.brand-plate {
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
   min-width: 0;
   flex-shrink: 1;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
-.brand svg {
+.brand-plate img {
+  display: block;
+  height: 34px;
+  width: auto;
   flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
-}
-
-.brand-word {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 14.5px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--cream);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
 .conn-pill {
@@ -607,18 +600,22 @@ textarea {
   box-shadow: var(--shadow-pop), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.front-door-crest-ring {
-  position: relative;
+.front-door-logo-plate {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
+  padding: 12px 20px;
+  border-radius: var(--radius-lg);
   margin: 0 auto 16px;
-  background: radial-gradient(circle at 50% 35%, rgba(201, 162, 39, 0.22), rgba(201, 162, 39, 0.02) 70%);
-  border: 1px solid var(--border-strong);
-  box-shadow: 0 0 0 5px rgba(201, 162, 39, 0.06), 0 10px 24px -10px rgba(0, 0, 0, 0.6);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-pop);
+}
+
+.front-door-logo-plate img {
+  display: block;
+  height: 62px;
+  width: auto;
 }
 
 .front-door-banner .page-title {

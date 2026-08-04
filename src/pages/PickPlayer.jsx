@@ -1,8 +1,6 @@
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
-import { Crest } from '../components/icons'
-
 export default function PickPlayer() {
   const { players } = useGolfData()
   const { setPlayerId } = useLocalPlayer()
@@ -10,10 +8,9 @@ export default function PickPlayer() {
   return (
     <div className="app-main" style={{ paddingBottom: 40, paddingTop: 22 }}>
       <div className="front-door-banner fairway">
-        <div className="front-door-crest-ring">
-          <Crest size={38} style={{ color: 'var(--brass-light)' }} />
+        <div className="front-door-logo-plate">
+          <img src="/logo-full-transparent.png" alt="Golf Boetietjies" />
         </div>
-        <h1 className="page-title">Golf Boetietjies</h1>
         <p className="page-subtitle">Pick your name. No hiding your handicap now.</p>
       </div>
 

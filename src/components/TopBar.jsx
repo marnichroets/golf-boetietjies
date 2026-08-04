@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
-import { BookIcon, Crest, SwapIcon } from './icons'
+import { BookIcon, SwapIcon } from './icons'
 import Rulebook from './Rulebook'
 
 export default function TopBar() {
@@ -20,9 +20,8 @@ export default function TopBar() {
 
   return (
     <div className="top-bar fairway">
-      <div className="brand">
-        <Crest size={23} style={{ color: 'var(--brass-light)' }} />
-        <span className="brand-word">Golf Boetietjies</span>
+      <div className="brand-plate">
+        <img src="/logo-full-transparent.png" alt="Golf Boetietjies" />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
         <button
