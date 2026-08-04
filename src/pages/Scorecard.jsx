@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useGolfData } from '../context/GolfDataContext'
 import { useLocalPlayer } from '../context/LocalPlayerContext'
 import { useFourball, MAX_GROUP } from '../hooks/useFourball'
-import { roundSummary, formatRelativePar, strokesReceived, holePoints } from '../utils/stableford'
+import { roundSummary, formatRelativePar, holePoints } from '../utils/stableford'
 import { ROUND_FORMAT_LABELS } from '../utils/roundFormats'
 import { playerColor, playerEmoji } from '../utils/playerVisuals'
 import { CheckIcon, LockIcon, UsersIcon } from '../components/icons'
@@ -66,26 +66,27 @@ function cellColor(strokes, par) {
   return 'var(--danger)'
 }
 
-// Net-to-par term for the little points caption under an entered score —
-// net (post-handicap), not gross, since that's what the Stableford points
-// themselves are based on.
-function netTerm(netToPar) {
-  if (netToPar <= -2) return 'Eagle'
-  if (netToPar === -1) return 'Birdie'
-  if (netToPar === 0) return 'Par'
-  if (netToPar === 1) return 'Bogey'
-  if (netToPar === 2) return 'Dbl Bogey'
-  return `+${netToPar}`
+// Gross-to-par term for the little points caption under an entered score —
+// traditional scorecard convention (Eagle/Birdie/Par/Bogey/...), always
+// against the raw stroke count, independent of handicap. The points half
+// of the caption is still net (handicap-adjusted) Stableford points, so
+// the two can legitimately disagree — e.g. "Bogey · 2pts" (gross bogey,
+// net par once strokes are received).
+function grossTerm(grossToPar) {
+  if (grossToPar <= -2) return 'Eagle'
+  if (grossToPar === -1) return 'Birdie'
+  if (grossToPar === 0) return 'Par'
+  if (grossToPar === 1) return 'Bogey'
+  if (grossToPar === 2) return 'Dbl Bogey'
+  return `+${grossToPar}`
 }
 
 // null for an unentered or picked-up (P/U) cell — there's no meaningful
 // points caption for either.
 function pointsCaption({ strokes, par, handicap, strokeIndex }) {
   if (strokes == null || strokes === 0 || par == null) return null
-  const received = strokesReceived(handicap ?? 0, strokeIndex ?? 10)
-  const netToPar = strokes - received - par
   const points = holePoints({ strokes, par, handicap, strokeIndex })
-  return `${netTerm(netToPar)} · ${points}pt${points === 1 ? '' : 's'}`
+  return `${grossTerm(strokes - par)} · ${points}pt${points === 1 ? '' : 's'}`
 }
 
 export default function Scorecard() {
