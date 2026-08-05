@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { FINE_REASONS } from '../utils/fineReasons'
+import { useLocalPlayer } from '../context/LocalPlayerContext'
 
 const FORMAT_ITEMS = [
   {
@@ -23,6 +25,16 @@ const POINTS_ROW = [
 ]
 
 export default function Rulebook({ onClose }) {
+  const { markRulebookOpened } = useLocalPlayer()
+
+  // Single source of truth for "has this device ever seen the Rulebook" —
+  // fires regardless of which entry point (TopBar icon or the one-time
+  // prompt banner) rendered this modal.
+  useEffect(() => {
+    markRulebookOpened()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div
       style={{

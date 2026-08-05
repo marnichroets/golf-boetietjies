@@ -8,7 +8,7 @@ import Rulebook from './Rulebook'
 
 export default function TopBar() {
   const { connected, players } = useGolfData()
-  const { playerId, setPlayerId } = useLocalPlayer()
+  const { playerId, setPlayerId, hasOpenedRulebook } = useLocalPlayer()
   const navigate = useNavigate()
   const me = players.find((p) => p.id === playerId)
   const [showRulebook, setShowRulebook] = useState(false)
@@ -29,6 +29,7 @@ export default function TopBar() {
           aria-label="Open the rulebook"
           title="Rulebook"
           style={{
+            position: 'relative',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -47,6 +48,7 @@ export default function TopBar() {
           }}
         >
           <BookIcon width={16} height={16} strokeWidth={1.9} />
+          {!hasOpenedRulebook && <span className="rulebook-badge" />}
         </button>
         <div className="conn-pill">
           <span className={`sync-dot ${connected ? '' : 'pending'}`} />

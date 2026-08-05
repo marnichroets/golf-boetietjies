@@ -434,6 +434,46 @@ textarea {
   box-shadow: 0 0 0 3px rgba(232, 202, 110, 0.25);
 }
 
+/* ---------- rulebook discovery badge ---------- */
+
+/* Classic "unread" ping — solid dot plus an expanding, fading ring —
+   deliberately off-palette (red, not brass) since it needs to read as
+   "something new here" at a glance, not blend in as another accent.
+   Removed for good (both layers) the first time the Rulebook is opened
+   from any entry point. Purely an absolute overlay, so it adds zero
+   width to the TopBar's already-tight 320-375px layout. */
+.rulebook-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.rulebook-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: rulebook-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes rulebook-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.65;
+  }
+  75%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
 /* ---------- top bar ---------- */
 
 .top-bar {

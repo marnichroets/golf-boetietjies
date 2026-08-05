@@ -7,6 +7,11 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 // exactly as before for the rest of the weekend. Bump again (e.g.
 // `_v3`) only if you deliberately need to force everyone to re-pick.
 const STORAGE_KEY = 'gb_player_id_v2'
+// Tracks whether this device has ever opened the Rulebook (from either
+// entry point — the TopBar icon or the one-time prompt) — drives the
+// unread-style badge dot on the TopBar icon so it's gone for good the
+// first time anyone actually looks.
+const RULEBOOK_OPENED_KEY = 'gb_rulebook_opened'
 const LocalPlayerContext = createContext(null)
 
 export function LocalPlayerProvider({ children }) {
@@ -16,6 +21,7 @@ export function LocalPlayerProvider({ children }) {
   // mount. Lets a "new here?" prompt fire once right after picking without
   // reappearing on every ordinary reopen.
   const [justPicked, setJustPicked] = useState(false)
+  const [hasOpenedRulebook, setHasOpenedRulebook] = useState(() => localStorage.getItem(RULEBOOK_OPENED_KEY) === 'true')
 
   useEffect(() => {
     const onStorage = (e) => {
@@ -34,8 +40,15 @@ export function LocalPlayerProvider({ children }) {
 
   const clearJustPicked = useCallback(() => setJustPicked(false), [])
 
+  const markRulebookOpened = useCallback(() => {
+    localStorage.setItem(RULEBOOK_OPENED_KEY, 'true')
+    setHasOpenedRulebook(true)
+  }, [])
+
   return (
-    <LocalPlayerContext.Provider value={{ playerId, setPlayerId, justPicked, clearJustPicked }}>
+    <LocalPlayerContext.Provider
+      value={{ playerId, setPlayerId, justPicked, clearJustPicked, hasOpenedRulebook, markRulebookOpened }}
+    >
       {children}
     </LocalPlayerContext.Provider>
   )
